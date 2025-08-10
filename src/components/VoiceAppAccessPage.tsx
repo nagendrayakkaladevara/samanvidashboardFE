@@ -14,7 +14,7 @@ import {
     SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
-import { AudioLines, Mic, Settings, Volume2, Loader2, User, Trash2, Plus } from "lucide-react"
+import { AudioLines, Mic, Settings, Volume2, Loader2, User, Trash2, Plus, Book } from "lucide-react"
 import {
     Table,
     TableBody,
@@ -22,17 +22,17 @@ import {
     TableHead,
     TableHeader,
     TableRow,
-  } from "@/components/ui/table"
+} from "@/components/ui/table"
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { useState, useEffect } from "react"
 import { toast } from "sonner"
@@ -57,7 +57,8 @@ export function VoiceAppAccessPage() {
     const [deletingId, setDeletingId] = useState<number | null>(null)
     const [userToDelete, setUserToDelete] = useState<{ id: number; username: string } | null>(null)
     const [showAddUserDialog, setShowAddUserDialog] = useState(false)
-    
+    const [showRulesDialog, setShowRulesDialog] = useState(false)
+
     // Form state for adding new user
     const [formData, setFormData] = useState({
         username: '',
@@ -77,15 +78,15 @@ export function VoiceAppAccessPage() {
             try {
                 setLoading(true)
                 setError(null)
-                
+
                 const response = await fetch('https://samanvi-backend.vercel.app/api/users')
-                
+
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`)
                 }
-                
+
                 const data = await response.json()
-                
+
                 if (data.message === "Users fetched successfully" && data.users) {
                     // Map the API response to include isActive field (defaulting to true since all users in API are active)
                     const usersWithActiveStatus = data.users.map((user: any) => ({
@@ -181,7 +182,7 @@ export function VoiceAppAccessPage() {
             }
 
             const data = await response.json()
-            
+
             // Add the new user to the local state with isActive: true
             const newUser = {
                 ...data.user,
@@ -218,7 +219,7 @@ export function VoiceAppAccessPage() {
 
         try {
             setDeletingId(userToDelete.id)
-            
+
             const response = await fetch(`https://samanvi-backend.vercel.app/api/users/${userToDelete.id}`, {
                 method: 'DELETE',
                 headers: {
@@ -232,7 +233,7 @@ export function VoiceAppAccessPage() {
 
             // Remove the deleted user from the local state
             setUsers(prevUsers => prevUsers.filter(user => user.id !== userToDelete.id))
-            
+
             toast.success(`User "${userToDelete.username}" deleted successfully`)
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Failed to delete user'
@@ -257,6 +258,11 @@ export function VoiceAppAccessPage() {
             setFormData({ username: '', password: '', email: '' })
             setFormErrors({ username: '', password: '', email: '' })
         }
+    }
+
+    // Handle rules dialog close
+    const handleRulesDialogClose = (open: boolean) => {
+        setShowRulesDialog(open)
     }
 
     // Helper function to format date
@@ -340,18 +346,27 @@ export function VoiceAppAccessPage() {
 
                     </div>
                 </div>
-                
+
                 {/* Users Section Header */}
-                <div className="flex items-center justify-end p-4 border-b">
+                <div className="flex items-center justify-between p-4 border-b">
+                    <Button
+                        variant="destructive"
+                        className="gap-2"
+                        onClick={() => setShowRulesDialog(true)}
+                    >
+                        <Book className="h-4 w-4" />
+                        Rules
+                    </Button>
                     <Button
                         onClick={() => setShowAddUserDialog(true)}
                         className="gap-2"
+                        variant="outline"
                     >
                         <Plus className="h-4 w-4" />
                         Add User
                     </Button>
                 </div>
-                
+
                 <div className="">
                     {loading ? (
                         <div className="flex items-center justify-center py-12">
@@ -364,8 +379,8 @@ export function VoiceAppAccessPage() {
                         <div className="rounded-lg border bg-destructive/10 text-destructive p-6 text-center">
                             <p className="font-medium">Error loading users</p>
                             <p className="text-sm mt-1">{error}</p>
-                            <Button 
-                                variant="outline" 
+                            <Button
+                                variant="outline"
                                 className="mt-4"
                                 onClick={() => window.location.reload()}
                             >
@@ -444,14 +459,14 @@ export function VoiceAppAccessPage() {
                                                         <AlertDialogHeader>
                                                             <AlertDialogTitle>Delete User</AlertDialogTitle>
                                                             <AlertDialogDescription>
-                                                                Are you sure you want to delete user <strong>"{user.username}"</strong>? 
-                                                                This action cannot be undone and will permanently remove the user 
+                                                                Are you sure you want to delete user <strong>"{user.username}"</strong>?
+                                                                This action cannot be undone and will permanently remove the user
                                                                 and their data from the system.
                                                             </AlertDialogDescription>
                                                         </AlertDialogHeader>
                                                         <AlertDialogFooter>
                                                             <AlertDialogCancel onClick={cancelDelete}>Cancel</AlertDialogCancel>
-                                                            <AlertDialogAction 
+                                                            <AlertDialogAction
                                                                 onClick={confirmDelete}
                                                                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                                                 disabled={deletingId === user.id}
@@ -478,9 +493,9 @@ export function VoiceAppAccessPage() {
                                     Showing {users.length} user{users.length !== 1 ? 's' : ''} with voice app access
                                 </p>
                                 <p className="text-muted-foreground text-sm">
-                                    Data from: <a 
-                                        href="https://samanvi-backend.vercel.app/api/users" 
-                                        target="_blank" 
+                                    Data from: <a
+                                        href="https://samanvi-backend.vercel.app/api/users"
+                                        target="_blank"
                                         rel="noopener noreferrer"
                                         className="text-primary hover:underline"
                                     >
@@ -492,7 +507,7 @@ export function VoiceAppAccessPage() {
                     )}
                 </div>
             </SidebarInset>
-            
+
             {/* Add User Dialog */}
             <AlertDialog open={showAddUserDialog} onOpenChange={handleAddUserDialogClose}>
                 <AlertDialogContent className="sm:max-w-md">
@@ -505,7 +520,7 @@ export function VoiceAppAccessPage() {
                             Create a new user account for voice app access. All fields are required.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
-                    
+
                     <div className="space-y-4 py-4">
                         <div>
                             <Label htmlFor="dialog-username" className="text-sm font-medium">
@@ -582,6 +597,64 @@ export function VoiceAppAccessPage() {
                                 </>
                             )}
                         </Button>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Rules Dialog */}
+            <AlertDialog open={showRulesDialog} onOpenChange={handleRulesDialogClose}>
+                <AlertDialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center gap-2">
+                            <Book className="h-5 w-5" />
+                            Voice App Rules & Guidelines
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Important rules and guidelines for using the Samanvi Route voice application.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+
+                    <div className="space-y-6 py-4">
+                        {/* Account Creation Rules */}
+                        <div className="space-y-3">
+                            <h3 className="text-lg font-semibold text-primary">Account Creation Rules</h3>
+                            <div className="space-y-2">
+                                <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
+                                    <div className="w-2 h-2 bg-red-500 rounded-full mt-2 flex-shrink-0"></div>
+                                    <div>
+                                        <p className="font-medium">Password Security</p>
+                                        <p className="text-sm text-muted-foreground">Personal passwords should not be provided. We are not handling password hashing for storage.</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
+                                    <div className="w-2 h-2 bg-orange-500 rounded-full mt-2 flex-shrink-0"></div>
+                                    <div>
+                                        <p className="font-medium">All Fields Required</p>
+                                        <p className="text-sm text-muted-foreground">Username, password, and email are all mandatory fields for account creation.</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
+                                    <div className="w-2 h-2 bg-orange-500 rounded-full mt-2 flex-shrink-0"></div>
+                                    <div>
+                                        <p className="font-medium">Unique Username</p>
+                                        <p className="text-sm text-muted-foreground">Username must be unique. Duplicate usernames are not allowed in the system.</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
+                                    <div className="w-2 h-2 bg-orange-500 rounded-full mt-2 flex-shrink-0"></div>
+                                    <div>
+                                        <p className="font-medium">Password Length</p>
+                                        <p className="text-sm text-muted-foreground">Password must be at least 6 characters long for security purposes.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>
+                            Close
+                        </AlertDialogCancel>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
