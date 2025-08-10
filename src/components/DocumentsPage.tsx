@@ -11,7 +11,8 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
-import { FileText, Clock, Wrench, EditIcon } from "lucide-react"
+import { FileText, Clock, Wrench, EditIcon, Loader2 } from "lucide-react"
+import { toast } from "sonner"
 import type {
   ColumnDef,
   ColumnFiltersState,
@@ -129,6 +130,48 @@ type BusResponse = {
   }
 }
 
+type AddBusFormData = {
+  registrationNo: string
+  model: string
+  manufacturer: string
+  yearOfMake: string
+  ownerName: string
+}
+
+type UpdateBusFormData = {
+  registrationNo: string
+  model: string
+  manufacturer: string
+  yearOfMake: string
+  ownerName: string
+}
+
+type FormErrors = {
+  [K in keyof AddBusFormData]?: string
+}
+
+type UpdateFormErrors = {
+  [K in keyof UpdateBusFormData]?: string
+}
+
+// Document Type types
+type DocumentType = {
+  id: string
+  name: string
+  description: string
+  createdAt: string
+  updatedAt: string
+}
+
+type CreateDocumentTypeFormData = {
+  name: string
+  description: string
+}
+
+type CreateDocumentTypeFormErrors = {
+  [K in keyof CreateDocumentTypeFormData]?: string
+}
+
 // Custom filter function for multi-column searching
 const multiColumnFilterFn: FilterFn<Bus> = (row, _columnId, filterValue) => {
   const searchableRowContent =
@@ -243,6 +286,825 @@ const columns: ColumnDef<Bus>[] = [
   },
 ]
 
+// Add Bus Dialog Component
+function AddBusDialog({
+  onBusAdded,
+  open,
+  onOpenChange
+}: {
+  onBusAdded: () => void
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}) {
+  const [formData, setFormData] = useState<AddBusFormData>({
+    registrationNo: "",
+    model: "",
+    manufacturer: "",
+    yearOfMake: "",
+    ownerName: ""
+  })
+  const [errors, setErrors] = useState<FormErrors>({})
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const validateForm = (): boolean => {
+    const newErrors: FormErrors = {}
+
+    // Registration number validation
+    if (!formData.registrationNo.trim()) {
+      newErrors.registrationNo = "Registration number is required"
+    } else if (!/^[A-Z]{2}[0-9]{2}[A-Z]{2}[0-9]{4}$/.test(formData.registrationNo.trim())) {
+      newErrors.registrationNo = "Invalid registration number format (e.g., KA01AB1234)"
+    }
+
+    // Model validation
+    if (!formData.model.trim()) {
+      newErrors.model = "Model is required"
+    }
+
+    // Manufacturer validation
+    if (!formData.manufacturer.trim()) {
+      newErrors.manufacturer = "Manufacturer is required"
+    }
+
+    // Year validation
+    if (!formData.yearOfMake.trim()) {
+      newErrors.yearOfMake = "Year of make is required"
+    } else {
+      const year = parseInt(formData.yearOfMake)
+      const currentYear = new Date().getFullYear()
+      if (isNaN(year) || year < 1900 || year > currentYear + 1) {
+        newErrors.yearOfMake = `Year must be between 1900 and ${currentYear + 1}`
+      }
+    }
+
+    // Owner name validation
+    if (!formData.ownerName.trim()) {
+      newErrors.ownerName = "Owner name is required"
+    } else if (formData.ownerName.trim().length < 2) {
+      newErrors.ownerName = "Owner name must be at least 2 characters"
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!validateForm()) {
+      return
+    }
+
+    setIsSubmitting(true)
+    try {
+      const authHeader = 'Basic ' + btoa('qwert:123456')
+
+      const response = await fetch('https://samanvi-backend.vercel.app/api/v1/buses', {
+        method: 'POST',
+        headers: {
+          'Authorization': authHeader,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          registrationNo: formData.registrationNo.trim(),
+          model: formData.model.trim(),
+          manufacturer: formData.manufacturer.trim(),
+          yearOfMake: parseInt(formData.yearOfMake),
+          ownerName: formData.ownerName.trim()
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to add bus')
+      }
+
+      // Reset form and close dialog
+      setFormData({
+        registrationNo: "",
+        model: "",
+        manufacturer: "",
+        yearOfMake: "",
+        ownerName: ""
+      })
+      setErrors({})
+      onOpenChange(false)
+      onBusAdded()
+      toast.success(`Bus "${formData.registrationNo}" added successfully!`)
+    } catch (error) {
+      console.error('Error adding bus:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Failed to add bus'
+      setErrors({ registrationNo: "Failed to add bus. Please try again." })
+      toast.error(`Failed to add bus: ${errorMessage}`)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleInputChange = (field: keyof AddBusFormData, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }))
+    // Clear error when user starts typing
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: undefined }))
+    }
+  }
+
+  return (
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent className="max-w-md">
+        <AlertDialogHeader>
+          <AlertDialogTitle>Add New Bus</AlertDialogTitle>
+          <AlertDialogDescription>
+            Enter the details for the new bus. All fields are required.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="registrationNo">Registration Number</Label>
+            <Input
+              id="registrationNo"
+              placeholder="KA01AB1234"
+              value={formData.registrationNo}
+              onChange={(e) => handleInputChange('registrationNo', e.target.value)}
+              className={errors.registrationNo ? "border-red-500" : ""}
+            />
+            {errors.registrationNo && (
+              <p className="text-sm text-red-500">{errors.registrationNo}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="model">Model</Label>
+            <Input
+              id="model"
+              placeholder="Tata Starbus"
+              value={formData.model}
+              onChange={(e) => handleInputChange('model', e.target.value)}
+              className={errors.model ? "border-red-500" : ""}
+            />
+            {errors.model && (
+              <p className="text-sm text-red-500">{errors.model}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="manufacturer">Manufacturer</Label>
+            <Input
+              id="manufacturer"
+              placeholder="Tata Motors"
+              value={formData.manufacturer}
+              onChange={(e) => handleInputChange('manufacturer', e.target.value)}
+              className={errors.manufacturer ? "border-red-500" : ""}
+            />
+            {errors.manufacturer && (
+              <p className="text-sm text-red-500">{errors.manufacturer}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="yearOfMake">Year of Make</Label>
+            <Input
+              id="yearOfMake"
+              type="number"
+              placeholder="2020"
+              value={formData.yearOfMake}
+              onChange={(e) => handleInputChange('yearOfMake', e.target.value)}
+              className={errors.yearOfMake ? "border-red-500" : ""}
+            />
+            {errors.yearOfMake && (
+              <p className="text-sm text-red-500">{errors.yearOfMake}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="ownerName">Owner Name</Label>
+            <Input
+              id="ownerName"
+              placeholder="John Doe"
+              value={formData.ownerName}
+              onChange={(e) => handleInputChange('ownerName', e.target.value)}
+              className={errors.ownerName ? "border-red-500" : ""}
+            />
+            {errors.ownerName && (
+              <p className="text-sm text-red-500">{errors.ownerName}</p>
+            )}
+          </div>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              type="button"
+              disabled={isSubmitting}
+              onClick={() => {
+                setFormData({
+                  registrationNo: "",
+                  model: "",
+                  manufacturer: "",
+                  yearOfMake: "",
+                  ownerName: ""
+                })
+                setErrors({})
+              }}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className="min-w-[80px]"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Adding...
+                </>
+              ) : (
+                "Add Bus"
+              )}
+            </Button>
+          </AlertDialogFooter>
+        </form>
+      </AlertDialogContent>
+    </AlertDialog>
+  )
+}
+
+// Edit Bus Dialog Component
+function EditBusDialog({
+  bus,
+  onBusUpdated,
+  open,
+  onOpenChange
+}: {
+  bus: Bus | null
+  onBusUpdated: () => void
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}) {
+  const [formData, setFormData] = useState<UpdateBusFormData>({
+    registrationNo: "",
+    model: "",
+    manufacturer: "",
+    yearOfMake: "",
+    ownerName: ""
+  })
+  const [errors, setErrors] = useState<UpdateFormErrors>({})
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Update form data when bus changes
+  useEffect(() => {
+    if (bus) {
+      setFormData({
+        registrationNo: bus.registrationNo,
+        model: bus.model,
+        manufacturer: bus.manufacturer,
+        yearOfMake: bus.yearOfMake.toString(),
+        ownerName: bus.ownerName
+      })
+      setErrors({})
+    }
+  }, [bus])
+
+  const validateForm = (): boolean => {
+    const newErrors: UpdateFormErrors = {}
+
+    // Registration number validation
+    if (!formData.registrationNo.trim()) {
+      newErrors.registrationNo = "Registration number is required"
+    } else if (!/^[A-Z]{2}[0-9]{2}[A-Z]{2}[0-9]{4}$/.test(formData.registrationNo.trim())) {
+      newErrors.registrationNo = "Invalid registration number format (e.g., KA01AB1234)"
+    }
+
+    // Model validation
+    if (!formData.model.trim()) {
+      newErrors.model = "Model is required"
+    }
+
+    // Manufacturer validation
+    if (!formData.manufacturer.trim()) {
+      newErrors.manufacturer = "Manufacturer is required"
+    }
+
+    // Year validation
+    if (!formData.yearOfMake.trim()) {
+      newErrors.yearOfMake = "Year of make is required"
+    } else {
+      const year = parseInt(formData.yearOfMake)
+      const currentYear = new Date().getFullYear()
+      if (isNaN(year) || year < 1900 || year > currentYear + 1) {
+        newErrors.yearOfMake = `Year must be between 1900 and ${currentYear + 1}`
+      }
+    }
+
+    // Owner name validation
+    if (!formData.ownerName.trim()) {
+      newErrors.ownerName = "Owner name is required"
+    } else if (formData.ownerName.trim().length < 2) {
+      newErrors.ownerName = "Owner name must be at least 2 characters"
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!validateForm() || !bus) {
+      return
+    }
+
+    setIsSubmitting(true)
+    try {
+      const authHeader = 'Basic ' + btoa('qwert:123456')
+
+      const response = await fetch(`https://samanvi-backend.vercel.app/api/v1/buses/${bus.id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': authHeader,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          registrationNo: formData.registrationNo.trim(),
+          model: formData.model.trim(),
+          manufacturer: formData.manufacturer.trim(),
+          yearOfMake: parseInt(formData.yearOfMake),
+          ownerName: formData.ownerName.trim()
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.message || 'Failed to update bus')
+      }
+
+      onOpenChange(false)
+      onBusUpdated()
+      toast.success(`Bus "${formData.registrationNo}" updated successfully!`)
+    } catch (error) {
+      console.error('Error updating bus:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update bus'
+      setErrors({ registrationNo: "Failed to update bus. Please try again." })
+      toast.error(`Failed to update bus: ${errorMessage}`)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleInputChange = (field: keyof UpdateBusFormData, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }))
+    // Clear error when user starts typing
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: undefined }))
+    }
+  }
+
+  if (!bus) return null
+
+  return (
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent className="max-w-md">
+        <AlertDialogHeader>
+          <AlertDialogTitle>Edit Bus</AlertDialogTitle>
+          <AlertDialogDescription>
+            Update the details for bus {bus.registrationNo}. All fields are required.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="edit-registrationNo">Registration Number</Label>
+            <Input
+              id="edit-registrationNo"
+              placeholder="KA01AB1234"
+              value={formData.registrationNo}
+              onChange={(e) => handleInputChange('registrationNo', e.target.value)}
+              className={errors.registrationNo ? "border-red-500" : ""}
+            />
+            {errors.registrationNo && (
+              <p className="text-sm text-red-500">{errors.registrationNo}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="edit-model">Model</Label>
+            <Input
+              id="edit-model"
+              placeholder="Tata Starbus"
+              value={formData.model}
+              onChange={(e) => handleInputChange('model', e.target.value)}
+              className={errors.model ? "border-red-500" : ""}
+            />
+            {errors.model && (
+              <p className="text-sm text-red-500">{errors.model}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="edit-manufacturer">Manufacturer</Label>
+            <Input
+              id="edit-manufacturer"
+              placeholder="Tata Motors"
+              value={formData.manufacturer}
+              onChange={(e) => handleInputChange('manufacturer', e.target.value)}
+              className={errors.manufacturer ? "border-red-500" : ""}
+            />
+            {errors.manufacturer && (
+              <p className="text-sm text-red-500">{errors.manufacturer}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="edit-yearOfMake">Year of Make</Label>
+            <Input
+              id="edit-yearOfMake"
+              type="number"
+              placeholder="2020"
+              value={formData.yearOfMake}
+              onChange={(e) => handleInputChange('yearOfMake', e.target.value)}
+              className={errors.yearOfMake ? "border-red-500" : ""}
+            />
+            {errors.yearOfMake && (
+              <p className="text-sm text-red-500">{errors.yearOfMake}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="edit-ownerName">Owner Name</Label>
+            <Input
+              id="edit-ownerName"
+              placeholder="John Doe"
+              value={formData.ownerName}
+              onChange={(e) => handleInputChange('ownerName', e.target.value)}
+              className={errors.ownerName ? "border-red-500" : ""}
+            />
+            {errors.ownerName && (
+              <p className="text-sm text-red-500">{errors.ownerName}</p>
+            )}
+          </div>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              type="button"
+              disabled={isSubmitting}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className="min-w-[80px]"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Updating...
+                </>
+              ) : (
+                "Update Bus"
+              )}
+            </Button>
+          </AlertDialogFooter>
+        </form>
+      </AlertDialogContent>
+    </AlertDialog>
+  )
+}
+
+function DeleteBusDialog({
+  bus,
+  onBusDeleted,
+  open,
+  onOpenChange
+}: {
+  bus: Bus | null
+  onBusDeleted: () => void
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}) {
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  const handleDelete = async () => {
+    if (!bus) return
+
+    try {
+      setIsDeleting(true)
+      const authHeader = 'Basic ' + btoa('qwert:123456')
+
+      const response = await fetch(`https://samanvi-backend.vercel.app/api/v1/buses/${bus.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': authHeader,
+          'Content-Type': 'application/json',
+        }
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.message || 'Failed to delete bus')
+      }
+
+      toast.success(`Bus ${bus.registrationNo} deleted successfully`)
+      onOpenChange(false)
+      onBusDeleted()
+    } catch (error) {
+      console.error('Error deleting bus:', error)
+      toast.error(error instanceof Error ? error.message : 'Failed to delete bus')
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  return (
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete Bus</AlertDialogTitle>
+          <AlertDialogDescription>
+            Are you sure you want to delete the bus <strong>{bus?.registrationNo}</strong>?
+            {bus?._count?.documents && bus._count.documents > 0 && (
+              <div className="mt-2 p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded-md">
+                <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                  ⚠️ This bus has {bus._count.documents} document{bus._count.documents === 1 ? '' : 's'} associated with it.
+                  Deleting this bus will also remove all associated documents.
+                </p>
+              </div>
+            )}
+            <p className="mt-2 text-sm text-muted-foreground">
+              This action cannot be undone.
+            </p>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={handleDelete}
+            disabled={isDeleting}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          >
+            {isDeleting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Deleting...
+              </>
+            ) : (
+              'Delete Bus'
+            )}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  )
+}
+
+function CreateDocumentTypeDialog({
+  onDocumentTypeCreated,
+  open,
+  onOpenChange
+}: {
+  onDocumentTypeCreated: () => void
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}) {
+  const [formData, setFormData] = useState<CreateDocumentTypeFormData>({
+    name: '',
+    description: ''
+  })
+  const [errors, setErrors] = useState<CreateDocumentTypeFormErrors>({})
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const validateForm = (): boolean => {
+    const newErrors: CreateDocumentTypeFormErrors = {}
+
+    if (!formData.name.trim()) {
+      newErrors.name = 'Document type name is required'
+    } else if (formData.name.trim().length < 2) {
+      newErrors.name = 'Document type name must be at least 2 characters'
+    } else if (formData.name.trim().length > 50) {
+      newErrors.name = 'Document type name must be less than 50 characters'
+    }
+
+    if (!formData.description.trim()) {
+      newErrors.description = 'Description is required'
+    } else if (formData.description.trim().length < 5) {
+      newErrors.description = 'Description must be at least 5 characters'
+    } else if (formData.description.trim().length > 200) {
+      newErrors.description = 'Description must be less than 200 characters'
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!validateForm()) {
+      return
+    }
+
+    setIsSubmitting(true)
+
+    try {
+      const authHeader = 'Basic ' + btoa('qwert:123456')
+
+      const response = await fetch('https://samanvi-backend.vercel.app/api/v1/document-types', {
+        method: 'POST',
+        headers: {
+          'Authorization': authHeader,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: formData.name.trim(),
+          description: formData.description.trim()
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.message || 'Failed to create document type')
+      }
+
+      const result = await response.json()
+
+      // Reset form
+      setFormData({ name: '', description: '' })
+      setErrors({})
+
+      // Close dialog and notify parent
+      onOpenChange(false)
+      onDocumentTypeCreated()
+
+      toast.success('Document type created successfully!')
+    } catch (error) {
+      console.error('Error creating document type:', error)
+      toast.error(error instanceof Error ? error.message : 'Failed to create document type')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleInputChange = (field: keyof CreateDocumentTypeFormData, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }))
+    // Clear error when user starts typing
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: undefined }))
+    }
+  }
+
+  return (
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+        <AlertDialogHeader>
+          <AlertDialogTitle>Create Document Type</AlertDialogTitle>
+          <AlertDialogDescription>
+            Add a new document type to organize your documents.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="name">Document Type Name</Label>
+            <Input
+              id="name"
+              value={formData.name}
+              onChange={(e) => handleInputChange('name', e.target.value)}
+              placeholder="Enter document type name"
+              className={errors.name ? 'border-red-500' : ''}
+            />
+            {errors.name && (
+              <p className="text-sm text-red-500">{errors.name}</p>
+            )}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="description">Description</Label>
+            <Input
+              id="description"
+              value={formData.description}
+              onChange={(e) => handleInputChange('description', e.target.value)}
+              placeholder="Enter description"
+              className={errors.description ? 'border-red-500' : ''}
+            />
+            {errors.description && (
+              <p className="text-sm text-red-500">{errors.description}</p>
+            )}
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel type="button" disabled={isSubmitting}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction type="submit" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                'Create Document Type'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </form>
+      </AlertDialogContent>
+    </AlertDialog>
+  )
+}
+
+function ViewDocumentTypesDialog({
+  open,
+  onOpenChange
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}) {
+  const [documentTypes, setDocumentTypes] = useState<DocumentType[]>([])
+  const [loadingDocumentTypes, setLoadingDocumentTypes] = useState(false)
+
+  const fetchDocumentTypes = async () => {
+    try {
+      setLoadingDocumentTypes(true)
+      const authHeader = 'Basic ' + btoa('qwert:123456')
+
+      const response = await fetch('https://samanvi-backend.vercel.app/api/v1/document-types', {
+        headers: {
+          'Authorization': authHeader,
+          'Content-Type': 'application/json',
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch document types')
+      }
+
+      const data = await response.json()
+      setDocumentTypes(data)
+    } catch (error) {
+      console.error('Error fetching document types:', error)
+      toast.error('Failed to load document types')
+    } finally {
+      setLoadingDocumentTypes(false)
+    }
+  }
+
+  useEffect(() => {
+    if (open) {
+      fetchDocumentTypes()
+    }
+  }, [open])
+
+  return (
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+        <AlertDialogHeader>
+          <AlertDialogTitle>Existing Document Types</AlertDialogTitle>
+          <AlertDialogDescription>
+            View all available document types in the system.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+
+        <div className="space-y-3">
+          {loadingDocumentTypes ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span className="text-sm text-muted-foreground">Loading document types...</span>
+              </div>
+            </div>
+          ) : documentTypes.length > 0 ? (
+            <div className="space-y-2 max-h-60 overflow-y-auto border rounded-md p-3">
+              {documentTypes.map((docType) => (
+                <div key={docType.id} className="flex items-start justify-between p-3 bg-muted/50 rounded-md hover:bg-muted/70 transition-colors">
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">{docType.name}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{docType.description}</p>
+                  </div>
+                  <div className="flex flex-col items-end gap-1">
+                    <Badge variant="secondary" className="text-xs">
+                      {new Date(docType.createdAt).toLocaleDateString()}
+                    </Badge>
+                    <p className="text-xs text-muted-foreground">
+                      ID: {docType.id}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-sm text-muted-foreground border rounded-md">
+              <FileText className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
+              <p>No document types found</p>
+              <p className="text-xs mt-1">Create your first document type to get started</p>
+            </div>
+          )}
+        </div>
+
+        <AlertDialogFooter>
+          <AlertDialogCancel>Close</AlertDialogCancel>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  )
+}
+
 export function DocumentsPage() {
   const id = useId()
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
@@ -252,6 +1114,13 @@ export function DocumentsPage() {
     pageSize: 10,
   })
   const inputRef = useRef<HTMLInputElement>(null)
+  const [addBusDialogOpen, setAddBusDialogOpen] = useState(false)
+  const [editBusDialogOpen, setEditBusDialogOpen] = useState(false)
+  const [selectedBusForEdit, setSelectedBusForEdit] = useState<Bus | null>(null)
+  const [deleteBusDialogOpen, setDeleteBusDialogOpen] = useState(false)
+  const [selectedBusForDelete, setSelectedBusForDelete] = useState<Bus | null>(null)
+  const [createDocumentTypeDialogOpen, setCreateDocumentTypeDialogOpen] = useState(false)
+  const [viewDocumentTypesDialogOpen, setViewDocumentTypesDialogOpen] = useState(false)
 
   const [sorting, setSorting] = useState<SortingState>([
     {
@@ -272,7 +1141,7 @@ export function DocumentsPage() {
         const authHeader = 'Basic ' + btoa('qwert:123456');
 
         const response = await fetch(
-          `http://localhost:3000/api/v1/buses?page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}&search=${columnFilters.find(f => f.id === 'registrationNo')?.value || ''}`,
+          `https://samanvi-backend.vercel.app/api/v1/buses?page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}&search=${columnFilters.find(f => f.id === 'registrationNo')?.value || ''}`,
           {
             headers: {
               'Authorization': authHeader,
@@ -289,8 +1158,12 @@ export function DocumentsPage() {
         setData(result.buses)
         setTotalBuses(result.pagination.total)
         setTotalPages(result.pagination.pages)
+        if (result.buses.length > 0) {
+          toast.success(`Successfully loaded ${result.buses.length} bus${result.buses.length === 1 ? '' : 'es'}`)
+        }
       } catch (error) {
         console.error('Error fetching buses:', error)
+        toast.error('Failed to load buses. Using sample data.')
         // Set some sample data if fetch fails
         setData([
           {
@@ -325,6 +1198,32 @@ export function DocumentsPage() {
     fetchBuses()
   }, [pagination.pageIndex, pagination.pageSize, columnFilters])
 
+  // Event listener for edit bus
+  useEffect(() => {
+    const handleEditBusEvent = (event: CustomEvent<Bus>) => {
+      handleEditBus(event.detail)
+    }
+
+    window.addEventListener('editBus', handleEditBusEvent as EventListener)
+
+    return () => {
+      window.removeEventListener('editBus', handleEditBusEvent as EventListener)
+    }
+  }, [])
+
+  // Event listener for delete bus
+  useEffect(() => {
+    const handleDeleteBusEvent = (event: CustomEvent<Bus>) => {
+      handleDeleteBus(event.detail)
+    }
+
+    window.addEventListener('deleteBus', handleDeleteBusEvent as EventListener)
+
+    return () => {
+      window.removeEventListener('deleteBus', handleDeleteBusEvent as EventListener)
+    }
+  }, [])
+
   const handleDeleteRows = () => {
     const selectedRows = table.getSelectedRowModel().rows
     const updatedData = data.filter(
@@ -332,6 +1231,7 @@ export function DocumentsPage() {
     )
     setData(updatedData)
     table.resetRowSelection()
+    toast.success(`${selectedRows.length} bus${selectedRows.length === 1 ? '' : 'es'} deleted successfully`)
   }
 
   const table = useReactTable({
@@ -398,6 +1298,123 @@ export function DocumentsPage() {
     table.setPageIndex(0) // Reset to first page when filtering
   }
 
+  const handleBusAdded = () => {
+    // Refresh the data after adding a new bus
+    setPagination(prev => ({ ...prev, pageIndex: 0 })) // Reset to first page
+    // Trigger a refetch of the data
+    const fetchBuses = async () => {
+      try {
+        setLoading(true)
+        const authHeader = 'Basic ' + btoa('qwert:123456');
+
+        const response = await fetch(
+          `https://samanvi-backend.vercel.app/api/v1/buses?page=1&limit=${pagination.pageSize}&search=${columnFilters.find(f => f.id === 'registrationNo')?.value || ''}`,
+          {
+            headers: {
+              'Authorization': authHeader,
+              'Content-Type': 'application/json',
+            }
+          }
+        )
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch buses')
+        }
+
+        const result: BusResponse = await response.json()
+        setData(result.buses)
+        setTotalBuses(result.pagination.total)
+        setTotalPages(result.pagination.pages)
+      } catch (error) {
+        console.error('Error fetching buses:', error)
+        toast.error('Failed to refresh bus list')
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchBuses()
+  }
+
+  const handleBusUpdated = () => {
+    // Refresh the data after updating a bus
+    const fetchBuses = async () => {
+      try {
+        setLoading(true)
+        const authHeader = 'Basic ' + btoa('qwert:123456');
+
+        const response = await fetch(
+          `https://samanvi-backend.vercel.app/api/v1/buses?page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}&search=${columnFilters.find(f => f.id === 'registrationNo')?.value || ''}`,
+          {
+            headers: {
+              'Authorization': authHeader,
+              'Content-Type': 'application/json',
+            }
+          }
+        )
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch buses')
+        }
+
+        const result: BusResponse = await response.json()
+        setData(result.buses)
+        setTotalBuses(result.pagination.total)
+        setTotalPages(result.pagination.pages)
+      } catch (error) {
+        console.error('Error fetching buses:', error)
+        toast.error('Failed to refresh bus list')
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchBuses()
+  }
+
+  const handleBusDeleted = () => {
+    // Refresh the data after deleting a bus
+    const fetchBuses = async () => {
+      try {
+        setLoading(true)
+        const authHeader = 'Basic ' + btoa('qwert:123456');
+
+        const response = await fetch(
+          `https://samanvi-backend.vercel.app/api/v1/buses?page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}&search=${columnFilters.find(f => f.id === 'registrationNo')?.value || ''}`,
+          {
+            headers: {
+              'Authorization': authHeader,
+              'Content-Type': 'application/json',
+            }
+          }
+        )
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch buses')
+        }
+
+        const result: BusResponse = await response.json()
+        setData(result.buses)
+        setTotalBuses(result.pagination.total)
+        setTotalPages(result.pagination.pages)
+      } catch (error) {
+        console.error('Error fetching buses:', error)
+        toast.error('Failed to refresh bus list')
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchBuses()
+  }
+
+  const handleEditBus = (bus: Bus) => {
+    setSelectedBusForEdit(bus)
+    setEditBusDialogOpen(true)
+  }
+
+  const handleDeleteBus = (bus: Bus) => {
+    setSelectedBusForDelete(bus)
+    setDeleteBusDialogOpen(true)
+  }
+
   return (
     <SidebarProvider>
       <AppSidebar />
@@ -427,15 +1444,12 @@ export function DocumentsPage() {
             {/* Coming Soon Badge */}
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400 rounded-full text-sm font-medium">
               <Clock className="h-4 w-4" />
-              Coming Soon
+              Coming Soon [Under Development]
             </div>
 
             {/* Main Content */}
             <div className="space-y-3">
-              <h1 className="text-3xl font-bold">Bus Management</h1>
-              <p className="text-muted-foreground text-lg">
-                Manage your fleet of buses with comprehensive tracking and documentation.
-              </p>
+              <h1 className="text-3xl font-bold">Bus Document Management</h1>
             </div>
 
             {/* Features Preview */}
@@ -639,8 +1653,30 @@ export function DocumentsPage() {
                   </AlertDialogContent>
                 </AlertDialog>
               )}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline">
+                   Documents
+                    <ChevronDownIcon
+                      className="-me-1 opacity-60"
+                      size={16}
+                      aria-hidden="true"
+                    />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="min-w-(--radix-dropdown-menu-trigger-width)">
+                  <DropdownMenuItem  onClick={() => setCreateDocumentTypeDialogOpen(true)}>Create Document</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setViewDocumentTypesDialogOpen(true)}>View Document Types</DropdownMenuItem>
+                  <DropdownMenuItem>Edit Documents [Coming Soon]</DropdownMenuItem>
+                  <DropdownMenuItem>Delete Documents [Coming Soon]</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               {/* Add bus button */}
-              <Button className="ml-auto" variant="outline">
+              <Button
+                className="ml-auto"
+                variant="outline"
+                onClick={() => setAddBusDialogOpen(true)}
+              >
                 <PlusIcon
                   className="-ms-1 opacity-60"
                   size={16}
@@ -650,6 +1686,77 @@ export function DocumentsPage() {
               </Button>
             </div>
           </div>
+
+          {/* Add Bus Dialog */}
+          <AddBusDialog
+            open={addBusDialogOpen}
+            onOpenChange={setAddBusDialogOpen}
+            onBusAdded={handleBusAdded}
+          />
+
+          {/* Edit Bus Dialog */}
+          <EditBusDialog
+            bus={selectedBusForEdit}
+            open={editBusDialogOpen}
+            onOpenChange={setEditBusDialogOpen}
+            onBusUpdated={handleBusUpdated}
+          />
+
+          {/* Delete Bus Dialog */}
+          <DeleteBusDialog
+            bus={selectedBusForDelete}
+            open={deleteBusDialogOpen}
+            onOpenChange={setDeleteBusDialogOpen}
+            onBusDeleted={handleBusDeleted}
+          />
+
+          {/* Create Document Type Dialog */}
+          <CreateDocumentTypeDialog
+            open={createDocumentTypeDialogOpen}
+            onOpenChange={setCreateDocumentTypeDialogOpen}
+            onDocumentTypeCreated={() => {
+              // Refresh the data after creating a document type
+              setPagination(prev => ({ ...prev, pageIndex: 0 })) // Reset to first page
+              // Trigger a refetch of the data
+              const fetchBuses = async () => {
+                try {
+                  setLoading(true)
+                  const authHeader = 'Basic ' + btoa('qwert:123456');
+
+                  const response = await fetch(
+                    `https://samanvi-backend.vercel.app/api/v1/buses?page=1&limit=${pagination.pageSize}&search=${columnFilters.find(f => f.id === 'registrationNo')?.value || ''}`,
+                    {
+                      headers: {
+                        'Authorization': authHeader,
+                        'Content-Type': 'application/json',
+                      }
+                    }
+                  )
+
+                  if (!response.ok) {
+                    throw new Error('Failed to fetch buses')
+                  }
+
+                  const result: BusResponse = await response.json()
+                  setData(result.buses)
+                  setTotalBuses(result.pagination.total)
+                  setTotalPages(result.pagination.pages)
+                } catch (error) {
+                  console.error('Error fetching buses:', error)
+                  toast.error('Failed to refresh bus list')
+                } finally {
+                  setLoading(false)
+                }
+              }
+              fetchBuses()
+            }}
+          />
+
+          {/* View Document Types Dialog */}
+          <ViewDocumentTypesDialog
+            open={viewDocumentTypesDialogOpen}
+            onOpenChange={setViewDocumentTypesDialogOpen}
+          />
 
           {/* Table */}
           <div className="bg-background overflow-hidden rounded-md border">
@@ -759,7 +1866,7 @@ export function DocumentsPage() {
           </div>
 
           {/* Pagination */}
-          <div className="flex items-center justify-between gap-8">
+          <div className="flex items-center justify-between gap-8 mb-2">
             {/* Results per page */}
             <div className="flex items-center gap-3">
               <Label htmlFor={id} className="max-sm:sr-only">
@@ -869,24 +1976,15 @@ export function DocumentsPage() {
               </Pagination>
             </div>
           </div>
-          <p className="text-muted-foreground mt-4 text-center text-sm">
-            Example of a more complex table made with{" "}
-            <a
-              className="hover:text-foreground underline"
-              href="https://tanstack.com/table"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              TanStack Table
-            </a>
-          </p>
         </div>
 
       </SidebarInset>
     </SidebarProvider>
   )
 }
-function RowActions({ row: _row }: { row: Row<Bus> }) {
+function RowActions({ row }: { row: Row<Bus> }) {
+  const bus = row.original
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -903,42 +2001,32 @@ function RowActions({ row: _row }: { row: Row<Bus> }) {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuGroup>
-          <DropdownMenuItem>
+          <DropdownMenuItem onClick={() => {
+            // This will be handled by the parent component
+            // We need to pass the bus data up to the parent
+            const event = new CustomEvent('editBus', { detail: bus })
+            window.dispatchEvent(event)
+          }}>
             <span>Edit bus</span>
             <DropdownMenuShortcut><EditIcon size={16} aria-hidden="true" /></DropdownMenuShortcut>
           </DropdownMenuItem>
           <DropdownMenuItem>
-            <span>Add/Edit document</span>
+            <span>View/Upload document [Coming Soon]</span>
             <DropdownMenuShortcut><PlusIcon size={16} aria-hidden="true" /></DropdownMenuShortcut>
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuGroup>
-          <DropdownMenuItem>
-            <span>Archive</span>
-            <DropdownMenuShortcut><PlusIcon size={16} aria-hidden="true" /></DropdownMenuShortcut>
-          </DropdownMenuItem>
-          <DropdownMenuSub>
-            <DropdownMenuSubTrigger>More</DropdownMenuSubTrigger>
-            <DropdownMenuPortal>
-              <DropdownMenuSubContent>
-                <DropdownMenuItem>Move to project</DropdownMenuItem>
-                <DropdownMenuItem>Move to folder</DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem>Advanced options</DropdownMenuItem>
-              </DropdownMenuSubContent>
-            </DropdownMenuPortal>
-          </DropdownMenuSub>
-        </DropdownMenuGroup>
-        <DropdownMenuSeparator />
-        <DropdownMenuGroup>
-          <DropdownMenuItem>Share</DropdownMenuItem>
-          <DropdownMenuItem>Add to favorites</DropdownMenuItem>
-        </DropdownMenuGroup>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem className="text-destructive focus:text-destructive">
+        <DropdownMenuItem
+          className="text-destructive focus:text-destructive"
+          onClick={() => {
+            // This will be handled by the parent component
+            // We need to pass the bus data up to the parent
+            const event = new CustomEvent('deleteBus', { detail: bus })
+            window.dispatchEvent(event)
+          }}
+        >
           <span>Delete</span>
-          <DropdownMenuShortcut>⌘⌫</DropdownMenuShortcut>
+          <DropdownMenuShortcut><TrashIcon size={16} aria-hidden="true" /></DropdownMenuShortcut>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
