@@ -69,12 +69,8 @@ import {
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuPortal,
   DropdownMenuSeparator,
   DropdownMenuShortcut,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
@@ -924,7 +920,7 @@ function CreateDocumentTypeDialog({
         throw new Error(errorData.message || 'Failed to create document type')
       }
 
-      const result = await response.json()
+      await response.json()
 
       // Reset form
       setFormData({ name: '', description: '' })
