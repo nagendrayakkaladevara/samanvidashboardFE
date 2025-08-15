@@ -1478,8 +1478,8 @@ export function DocumentsPage() {
 
         <div className="space-y-4 px-2">
           {/* Filters */}
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap justify-center sm:justify-start">
               {/* Filter by name or email */}
               <div className="relative">
                 <Input
