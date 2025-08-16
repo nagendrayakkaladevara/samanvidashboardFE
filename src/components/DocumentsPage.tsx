@@ -11,7 +11,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
-import { FileText, Clock, Wrench, EditIcon, Loader2 } from "lucide-react"
+import { FileText, Clock, Wrench, EditIcon, Loader2, PenIcon, CalendarIcon, RefreshCw } from "lucide-react"
 import { toast } from "sonner"
 import type {
   ColumnDef,
@@ -85,6 +85,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { Calendar } from "@/components/ui/calendar"
 import {
   Select,
   SelectContent,
@@ -101,6 +102,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { useId, useRef, useState, useEffect, useMemo } from "react"
+import type { DropdownNavProps, DropdownProps } from "react-day-picker"
 
 type Bus = {
   id: string
@@ -159,6 +161,53 @@ type DocumentType = {
   updatedAt: string
 }
 
+// Bus Document types
+type BusDocument = {
+  id: string
+  busId: string
+  docTypeId: string
+  documentNumber: string
+  issueDate: string | null
+  expiryDate: string | null
+  fileUrl: string | null
+  remarks: string | null
+  createdAt: string
+  updatedAt: string
+  uploadedAt: string
+  bus: {
+    id: string
+    registrationNo: string
+  }
+  docType: {
+    id: string
+    name: string
+  }
+}
+
+type CreateBusDocumentFormData = {
+  docTypeId: string
+  documentNumber: string
+  issueDate: Date | undefined
+  expiryDate: Date | undefined
+  fileUrl: string
+  remarks: string
+}
+
+type CreateBusDocumentFormErrors = {
+  [K in keyof CreateBusDocumentFormData]?: string
+}
+
+type UpdateBusDocumentFormData = {
+  issueDate: Date | undefined
+  expiryDate: Date | undefined
+  fileUrl: string
+  remarks: string
+}
+
+type UpdateBusDocumentFormErrors = {
+  [K in keyof UpdateBusDocumentFormData]?: string
+}
+
 type CreateDocumentTypeFormData = {
   name: string
   description: string
@@ -166,6 +215,15 @@ type CreateDocumentTypeFormData = {
 
 type CreateDocumentTypeFormErrors = {
   [K in keyof CreateDocumentTypeFormData]?: string
+}
+
+type UpdateDocumentTypeFormData = {
+  name: string
+  description: string
+}
+
+type UpdateDocumentTypeFormErrors = {
+  [K in keyof UpdateDocumentTypeFormData]?: string
 }
 
 // Custom filter function for multi-column searching
@@ -1005,13 +1063,364 @@ function CreateDocumentTypeDialog({
   )
 }
 
-function ViewDocumentTypesDialog({
+// Edit Document Type Dialog Component
+function EditDocumentTypeDialog({
+  docType,
+  onDocumentTypeUpdated,
   open,
   onOpenChange
 }: {
+  docType: DocumentType | null
+  onDocumentTypeUpdated: () => void
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
+  const [formData, setFormData] = useState<UpdateDocumentTypeFormData>({
+    name: '',
+    description: ''
+  })
+  const [errors, setErrors] = useState<UpdateDocumentTypeFormErrors>({})
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Update form data when docType changes
+  useEffect(() => {
+    if (docType) {
+      setFormData({
+        name: docType.name,
+        description: docType.description
+      })
+      setErrors({})
+    }
+  }, [docType])
+
+  const validateForm = (): boolean => {
+    const newErrors: UpdateDocumentTypeFormErrors = {}
+
+    if (!formData.name.trim()) {
+      newErrors.name = 'Document type name is required'
+    } else if (formData.name.trim().length < 2) {
+      newErrors.name = 'Document type name must be at least 2 characters'
+    } else if (formData.name.trim().length > 50) {
+      newErrors.name = 'Document type name must be less than 50 characters'
+    }
+
+    if (!formData.description.trim()) {
+      newErrors.description = 'Description is required'
+    } else if (formData.description.trim().length < 5) {
+      newErrors.description = 'Description must be at least 5 characters'
+    } else if (formData.description.trim().length > 200) {
+      newErrors.description = 'Description must be less than 200 characters'
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!validateForm() || !docType) {
+      return
+    }
+
+    setIsSubmitting(true)
+
+    try {
+      const authHeader = 'Basic ' + btoa('qwert:123456')
+
+      const response = await fetch(`https://samanvi-backend.vercel.app/api/v1/document-types/${docType.id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': authHeader,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: formData.name.trim(),
+          description: formData.description.trim()
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.message || 'Failed to update document type')
+      }
+
+      await response.json()
+
+      onOpenChange(false)
+      onDocumentTypeUpdated()
+
+      toast.success(`Document type "${formData.name}" updated successfully!`)
+    } catch (error) {
+      console.error('Error updating document type:', error)
+      toast.error(error instanceof Error ? error.message : 'Failed to update document type')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleInputChange = (field: keyof UpdateDocumentTypeFormData, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }))
+    // Clear error when user starts typing
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: undefined }))
+    }
+  }
+
+  if (!docType) return null
+
+  return (
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+        <AlertDialogHeader>
+          <AlertDialogTitle>Edit Document Type</AlertDialogTitle>
+          <AlertDialogDescription>
+            Update the details for document type "{docType.name}".
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="edit-name">Document Type Name</Label>
+            <Input
+              id="edit-name"
+              value={formData.name}
+              onChange={(e) => handleInputChange('name', e.target.value)}
+              placeholder="Enter document type name"
+              className={errors.name ? 'border-red-500' : ''}
+            />
+            {errors.name && (
+              <p className="text-sm text-red-500">{errors.name}</p>
+            )}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="edit-description">Description</Label>
+            <Input
+              id="edit-description"
+              value={formData.description}
+              onChange={(e) => handleInputChange('description', e.target.value)}
+              placeholder="Enter description"
+              className={errors.description ? 'border-red-500' : ''}
+            />
+            {errors.description && (
+              <p className="text-sm text-red-500">{errors.description}</p>
+            )}
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel type="button" disabled={isSubmitting}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction type="submit" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Updating...
+                </>
+              ) : (
+                'Update Document Type'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </form>
+      </AlertDialogContent>
+    </AlertDialog>
+  )
+}
+
+// Bus Documents Dialog Component
+function BusDocumentsDialog({
+  bus,
+  open,
+  onOpenChange
+}: {
+  bus: Bus | null
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}) {
+  const [documents, setDocuments] = useState<BusDocument[]>([])
+  const [loadingDocuments, setLoadingDocuments] = useState(false)
+  const [addDocumentDialogOpen, setAddDocumentDialogOpen] = useState(false)
+  const [editDocumentDialogOpen, setEditDocumentDialogOpen] = useState(false)
+  const [selectedDocumentForEdit, setSelectedDocumentForEdit] = useState<BusDocument | null>(null)
+
+  const fetchBusDocuments = async () => {
+    if (!bus) return
+
+    try {
+      setLoadingDocuments(true)
+      const authHeader = 'Basic ' + btoa('qwert:123456')
+
+      const response = await fetch(`https://samanvi-backend.vercel.app/api/v1/buses/${bus.id}/documents`, {
+        headers: {
+          'Authorization': authHeader,
+          'Content-Type': 'application/json',
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch bus documents')
+      }
+
+      const data = await response.json()
+      setDocuments(data)
+    } catch (error) {
+      console.error('Error fetching bus documents:', error)
+      toast.error('Failed to load bus documents')
+    } finally {
+      setLoadingDocuments(false)
+    }
+  }
+
+  useEffect(() => {
+    if (open && bus) {
+      fetchBusDocuments()
+    }
+  }, [open, bus])
+
+  return (
+    <>
+      <AlertDialog open={open} onOpenChange={onOpenChange}>
+        <AlertDialogContent className="sm:max-w-[800px] max-h-[80vh] overflow-y-auto">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Bus Documents - {bus?.registrationNo}</AlertDialogTitle>
+            <AlertDialogDescription>
+              View and manage documents for bus {bus?.registrationNo}.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div className="space-y-4">
+            {/* Add Document Button */}
+            <div className="flex justify-end">
+              <Button
+                onClick={() => setAddDocumentDialogOpen(true)}
+                className="flex items-center gap-2"
+              >
+                <PlusIcon className="h-4 w-4" />
+                Attach New Document
+              </Button>
+            </div>
+
+            {/* Documents List */}
+            {loadingDocuments ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="text-sm text-muted-foreground">Loading documents...</span>
+                </div>
+              </div>
+            ) : documents.length > 0 ? (
+              <div className="space-y-2 max-h-60 overflow-y-auto border rounded-md p-3">
+                {documents.map((document) => (
+                  <div key={document.id} className="flex items-start justify-between p-3 bg-muted/50 rounded-md hover:bg-muted/70 transition-colors">
+                    <div className="flex-1">
+                      <p className="text-s font-medium">{document.docType.name}</p>
+                      {/* <p className="text-xs text-muted-foreground mt-1">
+                        Document Number: {document.documentNumber}
+                      </p> */}
+                      {document.issueDate && (
+                        <p className="text-xs">
+                          Issue Date: <span className="font-bold text-muted-foreground">{new Date(document.issueDate).toLocaleDateString()}</span>
+                        </p>
+                      )}
+                      {document.expiryDate && (
+                        <p className="text-xs">
+                          Expiry Date: <span className="font-bold text-muted-foreground">{new Date(document.expiryDate).toLocaleDateString()}</span>
+                        </p>
+                      )}
+                      {document.remarks && (
+                        <p className="text-xs">
+                          Remarks: <span className="font-bold text-muted-foreground">{document.remarks}</span>
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex flex-col items-end gap-2">
+                      <Badge variant="outline" className="text-xs">
+                        Uploaded on: {document.uploadedAt ? new Date(document.uploadedAt).toLocaleDateString() : 'N/A'}
+                      </Badge>
+                      {document.fileUrl && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => window.open(document.fileUrl!, '_blank')}
+                          // className="h-6 px-2 text-xs"
+                        >
+                          View File
+                        </Button>
+                      )}
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => {
+                          setSelectedDocumentForEdit(document)
+                          setEditDocumentDialogOpen(true)
+                        }}
+                      >
+                        Update File
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-sm text-muted-foreground border rounded-md">
+                <FileText className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
+                <p>No documents found for this bus</p>
+                <p className="text-xs mt-1">Click "Attach New Document" to add documents</p>
+              </div>
+            )}
+          </div>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel>Close</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Add Document Dialog */}
+      <AddBusDocumentDialog
+        bus={bus}
+        open={addDocumentDialogOpen}
+        onOpenChange={setAddDocumentDialogOpen}
+        onDocumentAdded={() => {
+          fetchBusDocuments()
+        }}
+      />
+
+      {/* Edit Document Dialog */}
+      <EditBusDocumentDialog
+        document={selectedDocumentForEdit}
+        open={editDocumentDialogOpen}
+        onOpenChange={setEditDocumentDialogOpen}
+        onDocumentUpdated={() => {
+          fetchBusDocuments()
+        }}
+      />
+    </>
+  )
+}
+
+// Add Bus Document Dialog Component
+function AddBusDocumentDialog({
+  bus,
+  onDocumentAdded,
+  open,
+  onOpenChange
+}: {
+  bus: Bus | null
+  onDocumentAdded: () => void
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}) {
+  const [formData, setFormData] = useState<CreateBusDocumentFormData>({
+    docTypeId: '',
+    documentNumber: '',
+    issueDate: undefined,
+    expiryDate: undefined,
+    fileUrl: '',
+    remarks: ''
+  })
+  const [errors, setErrors] = useState<CreateBusDocumentFormErrors>({})
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [documentTypes, setDocumentTypes] = useState<DocumentType[]>([])
   const [loadingDocumentTypes, setLoadingDocumentTypes] = useState(false)
 
@@ -1047,57 +1456,962 @@ function ViewDocumentTypesDialog({
     }
   }, [open])
 
+  const validateForm = (): boolean => {
+    const newErrors: CreateBusDocumentFormErrors = {}
+
+    if (!formData.docTypeId.trim()) {
+      newErrors.docTypeId = 'Document type is required'
+    }
+
+    if (!formData.documentNumber.trim()) {
+      newErrors.documentNumber = 'Document number is required'
+    }
+
+    if (!formData.issueDate) {
+      newErrors.issueDate = 'Issue date is required'
+    }
+
+    if (!formData.expiryDate) {
+      newErrors.expiryDate = 'Expiry date is required'
+    }
+
+    if (formData.issueDate && formData.expiryDate) {
+      if (formData.issueDate >= formData.expiryDate) {
+        newErrors.expiryDate = 'Expiry date must be after issue date'
+      }
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!validateForm() || !bus) {
+      return
+    }
+
+    setIsSubmitting(true)
+
+    try {
+      const authHeader = 'Basic ' + btoa('qwert:123456')
+
+      const response = await fetch(`https://samanvi-backend.vercel.app/api/v1/buses/${bus.id}/documents`, {
+        method: 'POST',
+        headers: {
+          'Authorization': authHeader,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          docTypeId: formData.docTypeId.trim(),
+          documentNumber: formData.documentNumber.trim(),
+          issueDate: formData.issueDate ? formData.issueDate.toISOString() : null,
+          expiryDate: formData.expiryDate ? formData.expiryDate.toISOString() : null,
+          fileUrl: formData.fileUrl.trim() || null,
+          remarks: formData.remarks.trim() || null
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.message || 'Failed to create document')
+      }
+
+      await response.json()
+
+      // Reset form
+      setFormData({
+        docTypeId: '',
+        documentNumber: '',
+        issueDate: undefined,
+        expiryDate: undefined,
+        fileUrl: '',
+        remarks: ''
+      })
+      setErrors({})
+
+      // Only close dialog and notify parent on success
+      onDocumentAdded()
+      toast.success('Document attached successfully!')
+      onOpenChange(false)
+    } catch (error) {
+      console.error('Error creating document:', error)
+      toast.error(error instanceof Error ? error.message : 'Failed to create document')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleInputChange = (field: keyof CreateBusDocumentFormData, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }))
+    // Clear error when user starts typing
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: undefined }))
+    }
+  }
+
+  const handleDateChange = (field: 'issueDate' | 'expiryDate', date: Date | undefined) => {
+    setFormData(prev => ({ ...prev, [field]: date }))
+    // Clear error when user selects a date
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: undefined }))
+    }
+  }
+
+  const handleDocTypeChange = (docTypeId: string) => {
+    setFormData(prev => ({ ...prev, docTypeId }))
+    // Auto-populate document number with document type name
+    const selectedDocType = documentTypes.find(dt => dt.id === docTypeId)
+    if (selectedDocType) {
+      setFormData(prev => ({ ...prev, documentNumber: selectedDocType.name }))
+    }
+    // Clear error when user selects
+    if (errors.docTypeId) {
+      setErrors(prev => ({ ...prev, docTypeId: undefined }))
+    }
+  }
+
+  const handleCalendarChange = (
+    _value: string | number,
+    _e: React.ChangeEventHandler<HTMLSelectElement>
+  ) => {
+    const _event = {
+      target: {
+        value: String(_value),
+      },
+    } as React.ChangeEvent<HTMLSelectElement>
+    _e(_event)
+  }
+
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
+    <AlertDialog 
+      open={open} 
+      onOpenChange={(newOpen) => {
+        // Prevent closing dialog during submission
+        if (isSubmitting) {
+          return
+        }
+        onOpenChange(newOpen)
+      }}
+    >
       <AlertDialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
         <AlertDialogHeader>
-          <AlertDialogTitle>Existing Document Types</AlertDialogTitle>
+          <AlertDialogTitle>Attach New Document</AlertDialogTitle>
           <AlertDialogDescription>
-            View all available document types in the system.
+            Add a new document for bus {bus?.registrationNo}.
           </AlertDialogDescription>
         </AlertDialogHeader>
 
-        <div className="space-y-3">
-          {loadingDocumentTypes ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="flex items-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span className="text-sm text-muted-foreground">Loading document types...</span>
-              </div>
-            </div>
-          ) : documentTypes.length > 0 ? (
-            <div className="space-y-2 max-h-60 overflow-y-auto border rounded-md p-3">
-              {documentTypes.map((docType) => (
-                <div key={docType.id} className="flex items-start justify-between p-3 bg-muted/50 rounded-md hover:bg-muted/70 transition-colors">
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">{docType.name}</p>
-                    <p className="text-xs text-muted-foreground mt-1">{docType.description}</p>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="docTypeId">Document Type</Label>
+            <Select
+              value={formData.docTypeId}
+              onValueChange={handleDocTypeChange}
+            >
+              <SelectTrigger className={errors.docTypeId ? 'border-red-500' : ''}>
+                <SelectValue placeholder="Select document type" />
+              </SelectTrigger>
+              <SelectContent>
+                {loadingDocumentTypes ? (
+                  <div className="flex items-center justify-center py-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span className="ml-2 text-sm">Loading...</span>
                   </div>
-                  <div className="flex flex-col items-end gap-1">
-                    <Badge variant="secondary" className="text-xs">
-                      {new Date(docType.createdAt).toLocaleDateString()}
-                    </Badge>
-                    <p className="text-xs text-muted-foreground">
-                      ID: {docType.id}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8 text-sm text-muted-foreground border rounded-md">
-              <FileText className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
-              <p>No document types found</p>
-              <p className="text-xs mt-1">Create your first document type to get started</p>
-            </div>
-          )}
-        </div>
+                ) : (
+                  documentTypes.map((docType) => (
+                    <SelectItem key={docType.id} value={docType.id}>
+                      {docType.name}
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+            {errors.docTypeId && (
+              <p className="text-sm text-red-500">{errors.docTypeId}</p>
+            )}
+          </div>
 
-        <AlertDialogFooter>
-          <AlertDialogCancel>Close</AlertDialogCancel>
-        </AlertDialogFooter>
+          <div className="space-y-2">
+            <Label htmlFor="documentNumber">Document Name</Label>
+            <Input
+              id="documentNumber"
+              value={formData.documentNumber}
+              onChange={(e) => handleInputChange('documentNumber', e.target.value)}
+              placeholder="Document name will be auto-populated"
+              className={errors.documentNumber ? 'border-red-500' : ''}
+            />
+            {errors.documentNumber && (
+              <p className="text-sm text-red-500">{errors.documentNumber}</p>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="issueDate">Issue Date</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !formData.issueDate && "text-muted-foreground",
+                      errors.issueDate ? "border-red-500" : ""
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {formData.issueDate ? (
+                      formData.issueDate.toLocaleDateString()
+                    ) : (
+                      <span>Pick a date</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={formData.issueDate}
+                    onSelect={(date) => handleDateChange('issueDate', date)}
+                    initialFocus
+                    captionLayout="dropdown"
+                    defaultMonth={new Date()}
+                    startMonth={new Date(1980, 6)}
+                    hideNavigation
+                    components={{
+                      DropdownNav: (props: DropdownNavProps) => {
+                        return (
+                          <div className="flex w-full items-center gap-2">
+                            {props.children}
+                          </div>
+                        )
+                      },
+                      Dropdown: (props: DropdownProps) => {
+                        return (
+                          <Select
+                            value={String(props.value)}
+                            onValueChange={(value) => {
+                              if (props.onChange) {
+                                handleCalendarChange(value, props.onChange)
+                              }
+                            }}
+                          >
+                            <SelectTrigger className="h-8 w-fit font-medium first:grow">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="max-h-[min(26rem,var(--radix-select-content-available-height))]">
+                              {props.options?.map((option) => (
+                                <SelectItem
+                                  key={option.value}
+                                  value={String(option.value)}
+                                  disabled={option.disabled}
+                                >
+                                  {option.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )
+                      }
+                    }}
+                  />
+                </PopoverContent>
+              </Popover>
+              {errors.issueDate && (
+                <p className="text-sm text-red-500">{errors.issueDate}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="expiryDate">Expiry Date</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !formData.expiryDate && "text-muted-foreground",
+                      errors.expiryDate ? "border-red-500" : ""
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {formData.expiryDate ? (
+                      formData.expiryDate.toLocaleDateString()
+                    ) : (
+                      <span>Pick a date</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={formData.expiryDate}
+                    onSelect={(date) => handleDateChange('expiryDate', date)}
+                    initialFocus
+                    captionLayout="dropdown"
+                    defaultMonth={new Date()}
+                    startMonth={new Date(1980, 6)}
+                    hideNavigation
+                    components={{
+                      DropdownNav: (props: DropdownNavProps) => {
+                        return (
+                          <div className="flex w-full items-center gap-2">
+                            {props.children}
+                          </div>
+                        )
+                      },
+                      Dropdown: (props: DropdownProps) => {
+                        return (
+                          <Select
+                            value={String(props.value)}
+                            onValueChange={(value) => {
+                              if (props.onChange) {
+                                handleCalendarChange(value, props.onChange)
+                              }
+                            }}
+                          >
+                            <SelectTrigger className="h-8 w-fit font-medium first:grow">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="max-h-[min(26rem,var(--radix-select-content-available-height))]">
+                              {props.options?.map((option) => (
+                                <SelectItem
+                                  key={option.value}
+                                  value={String(option.value)}
+                                  disabled={option.disabled}
+                                >
+                                  {option.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )
+                      }
+                    }}
+                  />
+                </PopoverContent>
+              </Popover>
+              {errors.expiryDate && (
+                <p className="text-sm text-red-500">{errors.expiryDate}</p>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="fileUrl">File URL (Optional)</Label>
+            <Input
+              id="fileUrl"
+              value={formData.fileUrl}
+              onChange={(e) => handleInputChange('fileUrl', e.target.value)}
+              placeholder="https://drive.google.com/file/d/your_file_id/view"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="remarks">Remarks (Optional)</Label>
+            <Input
+              id="remarks"
+              value={formData.remarks}
+              onChange={(e) => handleInputChange('remarks', e.target.value)}
+              placeholder="Enter any additional remarks"
+            />
+          </div>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel type="button" disabled={isSubmitting}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction type="submit" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Attaching...
+                </>
+              ) : (
+                'Attach Document'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </form>
       </AlertDialogContent>
     </AlertDialog>
+  )
+}
+
+// Edit Bus Document Dialog Component
+function EditBusDocumentDialog({
+  document,
+  onDocumentUpdated,
+  open,
+  onOpenChange
+}: {
+  document: BusDocument | null
+  onDocumentUpdated: () => void
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}) {
+  const [formData, setFormData] = useState<UpdateBusDocumentFormData>({
+    issueDate: undefined,
+    expiryDate: undefined,
+    fileUrl: '',
+    remarks: ''
+  })
+  const [errors, setErrors] = useState<UpdateBusDocumentFormErrors>({})
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Update form data when document changes
+  useEffect(() => {
+    if (document) {
+      setFormData({
+        issueDate: document.issueDate ? new Date(document.issueDate) : undefined,
+        expiryDate: document.expiryDate ? new Date(document.expiryDate) : undefined,
+        fileUrl: document.fileUrl || '',
+        remarks: document.remarks || ''
+      })
+      setErrors({})
+    }
+  }, [document])
+
+  const validateForm = (): boolean => {
+    const newErrors: UpdateBusDocumentFormErrors = {}
+
+    if (!formData.issueDate) {
+      newErrors.issueDate = 'Issue date is required'
+    }
+
+    if (!formData.expiryDate) {
+      newErrors.expiryDate = 'Expiry date is required'
+    }
+
+    if (formData.issueDate && formData.expiryDate) {
+      if (formData.issueDate >= formData.expiryDate) {
+        newErrors.expiryDate = 'Expiry date must be after issue date'
+      }
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!validateForm() || !document) {
+      return
+    }
+
+    setIsSubmitting(true)
+
+    try {
+      const authHeader = 'Basic ' + btoa('qwert:123456')
+
+      const response = await fetch(`https://samanvi-backend.vercel.app/api/v1/documents/${document.id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': authHeader,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          issueDate: formData.issueDate ? formData.issueDate.toISOString() : null,
+          expiryDate: formData.expiryDate ? formData.expiryDate.toISOString() : null,
+          fileUrl: formData.fileUrl.trim() || null,
+          remarks: formData.remarks.trim() || null
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.message || 'Failed to update document')
+      }
+
+      await response.json()
+
+      // Only close dialog and show success message after successful response
+      toast.success('Document updated successfully!')
+      onDocumentUpdated()
+      onOpenChange(false)
+    } catch (error) {
+      console.error('Error updating document:', error)
+      toast.error(error instanceof Error ? error.message : 'Failed to update document')
+      // Don't close dialog on error - let user see the error and try again
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleInputChange = (field: keyof UpdateBusDocumentFormData, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }))
+    // Clear error when user starts typing
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: undefined }))
+    }
+  }
+
+  const handleDateChange = (field: 'issueDate' | 'expiryDate', date: Date | undefined) => {
+    setFormData(prev => ({ ...prev, [field]: date }))
+    // Clear error when user selects a date
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: undefined }))
+    }
+  }
+
+  const handleCalendarChange = (
+    _value: string | number,
+    _e: React.ChangeEventHandler<HTMLSelectElement>
+  ) => {
+    const _event = {
+      target: {
+        value: String(_value),
+      },
+    } as React.ChangeEvent<HTMLSelectElement>
+    _e(_event)
+  }
+
+  if (!document) return null
+
+  return (
+    <AlertDialog 
+      open={open} 
+      onOpenChange={(newOpen) => {
+        // Prevent closing dialog during submission
+        if (isSubmitting) {
+          return
+        }
+        onOpenChange(newOpen)
+      }}
+    >
+      <AlertDialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+        <AlertDialogHeader>
+          <AlertDialogTitle>Edit Document</AlertDialogTitle>
+          <AlertDialogDescription>
+            Update the document details for {document.docType.name}.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Disabled fields - Document Type and Document Number */}
+          <div className="space-y-2">
+            <Label htmlFor="docType">Document Type</Label>
+            <Input
+              id="docType"
+              value={document.docType.name}
+              disabled
+              className="bg-muted"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="documentNumber">Document Number</Label>
+            <Input
+              id="documentNumber"
+              value={document.documentNumber}
+              disabled
+              className="bg-muted"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="issueDate">Issue Date</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !formData.issueDate && "text-muted-foreground",
+                      errors.issueDate ? "border-red-500" : ""
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {formData.issueDate ? (
+                      formData.issueDate.toLocaleDateString()
+                    ) : (
+                      <span>Pick a date</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={formData.issueDate}
+                    onSelect={(date) => handleDateChange('issueDate', date)}
+                    initialFocus
+                    captionLayout="dropdown"
+                    defaultMonth={new Date()}
+                    startMonth={new Date(1980, 6)}
+                    hideNavigation
+                    components={{
+                      DropdownNav: (props: DropdownNavProps) => {
+                        return (
+                          <div className="flex w-full items-center gap-2">
+                            {props.children}
+                          </div>
+                        )
+                      },
+                      Dropdown: (props: DropdownProps) => {
+                        return (
+                          <Select
+                            value={String(props.value)}
+                            onValueChange={(value) => {
+                              if (props.onChange) {
+                                handleCalendarChange(value, props.onChange)
+                              }
+                            }}
+                          >
+                            <SelectTrigger className="h-8 w-fit font-medium first:grow">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="max-h-[min(26rem,var(--radix-select-content-available-height))]">
+                              {props.options?.map((option) => (
+                                <SelectItem
+                                  key={option.value}
+                                  value={String(option.value)}
+                                  disabled={option.disabled}
+                                >
+                                  {option.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )
+                      }
+                    }}
+                  />
+                </PopoverContent>
+              </Popover>
+              {errors.issueDate && (
+                <p className="text-sm text-red-500">{errors.issueDate}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="expiryDate">Expiry Date</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !formData.expiryDate && "text-muted-foreground",
+                      errors.expiryDate ? "border-red-500" : ""
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {formData.expiryDate ? (
+                      formData.expiryDate.toLocaleDateString()
+                    ) : (
+                      <span>Pick a date</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={formData.expiryDate}
+                    onSelect={(date) => handleDateChange('expiryDate', date)}
+                    initialFocus
+                    captionLayout="dropdown"
+                    defaultMonth={new Date()}
+                    startMonth={new Date(1980, 6)}
+                    hideNavigation
+                    components={{
+                      DropdownNav: (props: DropdownNavProps) => {
+                        return (
+                          <div className="flex w-full items-center gap-2">
+                            {props.children}
+                          </div>
+                        )
+                      },
+                      Dropdown: (props: DropdownProps) => {
+                        return (
+                          <Select
+                            value={String(props.value)}
+                            onValueChange={(value) => {
+                              if (props.onChange) {
+                                handleCalendarChange(value, props.onChange)
+                              }
+                            }}
+                          >
+                            <SelectTrigger className="h-8 w-fit font-medium first:grow">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="max-h-[min(26rem,var(--radix-select-content-available-height))]">
+                              {props.options?.map((option) => (
+                                <SelectItem
+                                  key={option.value}
+                                  value={String(option.value)}
+                                  disabled={option.disabled}
+                                >
+                                  {option.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )
+                      }
+                    }}
+                  />
+                </PopoverContent>
+              </Popover>
+              {errors.expiryDate && (
+                <p className="text-sm text-red-500">{errors.expiryDate}</p>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="fileUrl">File URL (Optional)</Label>
+            <Input
+              id="fileUrl"
+              value={formData.fileUrl}
+              onChange={(e) => handleInputChange('fileUrl', e.target.value)}
+              placeholder="https://drive.google.com/file/d/your_file_id/view"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="remarks">Remarks (Optional)</Label>
+            <Input
+              id="remarks"
+              value={formData.remarks}
+              onChange={(e) => handleInputChange('remarks', e.target.value)}
+              placeholder="Enter any additional remarks"
+            />
+          </div>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel type="button" disabled={isSubmitting}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction type="submit" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Updating...
+                </>
+              ) : (
+                'Update Document'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </form>
+      </AlertDialogContent>
+    </AlertDialog>
+  )
+}
+
+function ViewDocumentTypesDialog({
+  open,
+  onOpenChange
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}) {
+  const [documentTypes, setDocumentTypes] = useState<DocumentType[]>([])
+  const [loadingDocumentTypes, setLoadingDocumentTypes] = useState(false)
+  const [deletingDocTypeId, setDeletingDocTypeId] = useState<string | null>(null)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [docTypeToDelete, setDocTypeToDelete] = useState<DocumentType | null>(null)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [docTypeToEdit, setDocTypeToEdit] = useState<DocumentType | null>(null)
+
+  const fetchDocumentTypes = async () => {
+    try {
+      setLoadingDocumentTypes(true)
+      const authHeader = 'Basic ' + btoa('qwert:123456')
+
+      const response = await fetch('https://samanvi-backend.vercel.app/api/v1/document-types', {
+        headers: {
+          'Authorization': authHeader,
+          'Content-Type': 'application/json',
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch document types')
+      }
+
+      const data = await response.json()
+      setDocumentTypes(data)
+    } catch (error) {
+      console.error('Error fetching document types:', error)
+      toast.error('Failed to load document types')
+    } finally {
+      setLoadingDocumentTypes(false)
+    }
+  }
+
+  const handleDeleteDocumentType = async () => {
+    if (!docTypeToDelete) return
+
+    try {
+      setDeletingDocTypeId(docTypeToDelete.id)
+      const authHeader = 'Basic ' + btoa('qwert:123456')
+
+      const response = await fetch(`https://samanvi-backend.vercel.app/api/v1/document-types/${docTypeToDelete.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': authHeader,
+          'Content-Type': 'application/json',
+        }
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.message || 'Failed to delete document type')
+      }
+
+      toast.success(`Document type "${docTypeToDelete.name}" deleted successfully`)
+      setDeleteDialogOpen(false)
+      setDocTypeToDelete(null)
+      // Refresh the document types list
+      fetchDocumentTypes()
+    } catch (error) {
+      console.error('Error deleting document type:', error)
+      toast.error(error instanceof Error ? error.message : 'Failed to delete document type')
+    } finally {
+      setDeletingDocTypeId(null)
+    }
+  }
+
+  const openDeleteDialog = (docType: DocumentType) => {
+    setDocTypeToDelete(docType)
+    setDeleteDialogOpen(true)
+  }
+
+  const openEditDialog = (docType: DocumentType) => {
+    setDocTypeToEdit(docType)
+    setEditDialogOpen(true)
+  }
+
+  useEffect(() => {
+    if (open) {
+      fetchDocumentTypes()
+    }
+  }, [open])
+
+  return (
+    <>
+      <AlertDialog open={open} onOpenChange={onOpenChange}>
+        <AlertDialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Existing Document Types</AlertDialogTitle>
+            <AlertDialogDescription>
+              View all available document types in the system.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div className="space-y-3">
+            {loadingDocumentTypes ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="text-sm text-muted-foreground">Loading document types...</span>
+                </div>
+              </div>
+            ) : documentTypes.length > 0 ? (
+              <div className="space-y-2 max-h-60 overflow-y-auto border rounded-md p-3">
+                {documentTypes.map((docType) => (
+                  <div key={docType.id} className="flex items-start justify-between p-3 bg-muted/50 rounded-md hover:bg-muted/70 transition-colors">
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">{docType.name}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{docType.description}</p>
+                    </div>
+                    <div className="flex flex-col items-end gap-2">
+                      <div className="flex items-center gap-1">
+                        <Badge variant="secondary" className="text-xs">
+                          {new Date(docType.createdAt).toLocaleDateString()}
+                        </Badge>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => openEditDialog(docType)}
+                        //  className="h-6 px-2 text-xs"
+                        >
+                          <PenIcon className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => openDeleteDialog(docType)}
+                          disabled={deletingDocTypeId === docType.id}
+                        //  className="h-6 px-2 text-xs"
+                        >
+                          {deletingDocTypeId === docType.id ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <TrashIcon className="h-3 w-3" />
+                          )}
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        ID: {docType.id}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-sm text-muted-foreground border rounded-md">
+                <FileText className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
+                <p>No document types found</p>
+                <p className="text-xs mt-1">Create your first document type to get started</p>
+              </div>
+            )}
+          </div>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel>Close</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Document Type</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete the document type <strong>"{docTypeToDelete?.name}"</strong>?
+              <p className="mt-2 text-sm text-muted-foreground">
+                This action cannot be undone. If this document type is currently in use by any documents, it cannot be deleted.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletingDocTypeId === docTypeToDelete?.id}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteDocumentType}
+              disabled={deletingDocTypeId === docTypeToDelete?.id}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deletingDocTypeId === docTypeToDelete?.id ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                'Delete Document Type'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Edit Document Type Dialog */}
+      <EditDocumentTypeDialog
+        docType={docTypeToEdit}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        onDocumentTypeUpdated={() => {
+          // Refresh the document types list
+          fetchDocumentTypes()
+        }}
+      />
+    </>
   )
 }
 
@@ -1117,6 +2431,8 @@ export function DocumentsPage() {
   const [selectedBusForDelete, setSelectedBusForDelete] = useState<Bus | null>(null)
   const [createDocumentTypeDialogOpen, setCreateDocumentTypeDialogOpen] = useState(false)
   const [viewDocumentTypesDialogOpen, setViewDocumentTypesDialogOpen] = useState(false)
+  const [busDocumentsDialogOpen, setBusDocumentsDialogOpen] = useState(false)
+  const [selectedBusForDocuments, setSelectedBusForDocuments] = useState<Bus | null>(null)
 
   const [sorting, setSorting] = useState<SortingState>([
     {
@@ -1127,6 +2443,7 @@ export function DocumentsPage() {
 
   const [data, setData] = useState<Bus[]>([])
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [totalBuses, setTotalBuses] = useState(0)
   const [totalPages, setTotalPages] = useState(0)
 
@@ -1219,6 +2536,8 @@ export function DocumentsPage() {
       window.removeEventListener('deleteBus', handleDeleteBusEvent as EventListener)
     }
   }, [])
+
+
 
   const handleDeleteRows = () => {
     const selectedRows = table.getSelectedRowModel().rows
@@ -1401,6 +2720,38 @@ export function DocumentsPage() {
     fetchBuses()
   }
 
+  const handleRefresh = async () => {
+    try {
+      setRefreshing(true)
+      const authHeader = 'Basic ' + btoa('qwert:123456');
+
+      const response = await fetch(
+        `https://samanvi-backend.vercel.app/api/v1/buses?page=${pagination.pageIndex + 1}&limit=${pagination.pageSize}&search=${columnFilters.find(f => f.id === 'registrationNo')?.value || ''}`,
+        {
+          headers: {
+            'Authorization': authHeader,
+            'Content-Type': 'application/json',
+          }
+        }
+      )
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch buses')
+      }
+
+      const result: BusResponse = await response.json()
+      setData(result.buses)
+      setTotalBuses(result.pagination.total)
+      setTotalPages(result.pagination.pages)
+      toast.success(`Refreshed ${result.buses.length} bus${result.buses.length === 1 ? '' : 'es'}`)
+    } catch (error) {
+      console.error('Error refreshing buses:', error)
+      toast.error('Failed to refresh bus list')
+    } finally {
+      setRefreshing(false)
+    }
+  }
+
   const handleEditBus = (bus: Bus) => {
     setSelectedBusForEdit(bus)
     setEditBusDialogOpen(true)
@@ -1410,6 +2761,24 @@ export function DocumentsPage() {
     setSelectedBusForDelete(bus)
     setDeleteBusDialogOpen(true)
   }
+
+  const handleViewBusDocuments = (bus: Bus) => {
+    setSelectedBusForDocuments(bus)
+    setBusDocumentsDialogOpen(true)
+  }
+
+  // Event listener for view bus documents
+  useEffect(() => {
+    const handleViewBusDocumentsEvent = (event: CustomEvent<Bus>) => {
+      handleViewBusDocuments(event.detail)
+    }
+
+    window.addEventListener('viewBusDocuments', handleViewBusDocumentsEvent as EventListener)
+
+    return () => {
+      window.removeEventListener('viewBusDocuments', handleViewBusDocumentsEvent as EventListener)
+    }
+  }, [])
 
   return (
     <SidebarProvider>
@@ -1652,7 +3021,7 @@ export function DocumentsPage() {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline">
-                   Documents
+                    Documents
                     <ChevronDownIcon
                       className="-me-1 opacity-60"
                       size={16}
@@ -1661,12 +3030,25 @@ export function DocumentsPage() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="min-w-(--radix-dropdown-menu-trigger-width)">
-                  <DropdownMenuItem  onClick={() => setCreateDocumentTypeDialogOpen(true)}>Create Document</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setCreateDocumentTypeDialogOpen(true)}>Create Document</DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setViewDocumentTypesDialogOpen(true)}>View Document Types</DropdownMenuItem>
-                  <DropdownMenuItem>Edit Documents [Coming Soon]</DropdownMenuItem>
-                  <DropdownMenuItem>Delete Documents [Coming Soon]</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+              {/* Refresh button */}
+              <Button
+                variant="outline"
+                onClick={handleRefresh}
+                disabled={refreshing}
+              >
+                <RefreshCw
+                  className={cn(
+                    "h-4 w-4",
+                    refreshing && "animate-spin"
+                  )}
+                />
+                {refreshing ? "Refreshing..." : "Refresh"}
+              </Button>
+              
               {/* Add bus button */}
               <Button
                 className="ml-auto"
@@ -1752,6 +3134,13 @@ export function DocumentsPage() {
           <ViewDocumentTypesDialog
             open={viewDocumentTypesDialogOpen}
             onOpenChange={setViewDocumentTypesDialogOpen}
+          />
+
+          {/* Bus Documents Dialog */}
+          <BusDocumentsDialog
+            bus={selectedBusForDocuments}
+            open={busDocumentsDialogOpen}
+            onOpenChange={setBusDocumentsDialogOpen}
           />
 
           {/* Table */}
@@ -2006,8 +3395,12 @@ function RowActions({ row }: { row: Row<Bus> }) {
             <span>Edit bus</span>
             <DropdownMenuShortcut><EditIcon size={16} aria-hidden="true" /></DropdownMenuShortcut>
           </DropdownMenuItem>
-          <DropdownMenuItem>
-            <span>View/Upload document [Coming Soon]</span>
+          <DropdownMenuItem onClick={() => {
+            // This will be handled by the parent component
+            const event = new CustomEvent('viewBusDocuments', { detail: bus })
+            window.dispatchEvent(event)
+          }}>
+            <span>View/Upload document</span>
             <DropdownMenuShortcut><PlusIcon size={16} aria-hidden="true" /></DropdownMenuShortcut>
           </DropdownMenuItem>
         </DropdownMenuGroup>
