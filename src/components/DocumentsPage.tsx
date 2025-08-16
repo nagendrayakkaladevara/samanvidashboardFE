@@ -104,6 +104,12 @@ import {
 import { useId, useRef, useState, useEffect, useMemo } from "react"
 import type { DropdownNavProps, DropdownProps } from "react-day-picker"
 
+// Helper function for consistent date formatting
+const formatDate = (date: Date | string): string => {
+  const dateObj = typeof date === 'string' ? new Date(date) : date
+  return dateObj.toLocaleDateString('en-GB')
+}
+
 type Bus = {
   id: string
   registrationNo: string
@@ -325,7 +331,7 @@ const columns: ColumnDef<Bus>[] = [
       const date = new Date(row.getValue("createdAt"))
       return (
         <div className="text-sm text-muted-foreground">
-          {date.toLocaleDateString()}
+          {formatDate(date)}
         </div>
       )
     },
@@ -1319,12 +1325,12 @@ function BusDocumentsDialog({
                       </p> */}
                       {document.issueDate && (
                         <p className="text-xs">
-                          Issue Date: <span className="font-bold text-muted-foreground">{new Date(document.issueDate).toLocaleDateString()}</span>
+                          Issue Date: <span className="font-bold text-muted-foreground">{formatDate(document.issueDate)}</span>
                         </p>
                       )}
                       {document.expiryDate && (
                         <p className="text-xs">
-                          Expiry Date: <span className="font-bold text-muted-foreground">{new Date(document.expiryDate).toLocaleDateString()}</span>
+                          Expiry Date: <span className="font-bold text-muted-foreground">{formatDate(document.expiryDate)}</span>
                         </p>
                       )}
                       {document.remarks && (
@@ -1335,7 +1341,7 @@ function BusDocumentsDialog({
                     </div>
                     <div className="flex flex-col items-end gap-2">
                       <Badge variant="outline" className="text-xs">
-                        Uploaded on: {document.uploadedAt ? new Date(document.uploadedAt).toLocaleDateString() : 'N/A'}
+                        Uploaded on: {document.uploadedAt ? formatDate(document.uploadedAt) : 'N/A'}
                       </Badge>
                       {document.fileUrl && (
                         <Button
@@ -2321,7 +2327,7 @@ function ViewDocumentTypesDialog({
                     <div className="flex flex-col items-end gap-2">
                       <div className="flex items-center gap-1">
                         <Badge variant="secondary" className="text-xs">
-                          {new Date(docType.createdAt).toLocaleDateString()}
+                          {formatDate(docType.createdAt)}
                         </Badge>
                         <Button
                           size="sm"
