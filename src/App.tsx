@@ -5,6 +5,7 @@ import { LoginForm } from './components/login-form'
 import { HomePage } from './components/HomePage'
 import { VoiceAppAccessPage } from './components/VoiceAppAccessPage'
 import { DocumentsPage } from './components/DocumentsPage'
+import { SettingsPage } from './components/SettingsPage'
 import { Toaster } from './components/ui/sonner'
 import { ThemeProvider } from './components/theme-provider'
 
@@ -39,7 +40,7 @@ function LoginPage() {
 
 function App() {
   return (
-    <ThemeProvider defaultTheme="dark">
+    <ThemeProvider defaultTheme="default">
       <Router>
         <div className="App">
           <Toaster richColors />
@@ -49,6 +50,7 @@ function App() {
             <Route path="/home" element={<HomePage />} />
             <Route path="/voice-app-access" element={<VoiceAppAccessPage />} />
             <Route path="/documents" element={<DocumentsPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
           </Routes>
         </div>
       </Router>

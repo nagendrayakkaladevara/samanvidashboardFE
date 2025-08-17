@@ -1,58 +1,68 @@
 import { createContext, useContext, useEffect, useState } from "react"
 
-type Theme = "dark" | "light" | "system"
+type Theme = "default" | "twitter" | "clude" | "vercel"
+type Mode = "light" | "dark"
 
 type ThemeProviderProps = {
   children: React.ReactNode
   defaultTheme?: Theme
+  defaultMode?: Mode
   storageKey?: string
 }
 
 type ThemeProviderState = {
   theme: Theme
+  mode: Mode
   setTheme: (theme: Theme) => void
+  setMode: (mode: Mode) => void
 }
 
 const initialState: ThemeProviderState = {
-  theme: "system",
+  theme: "default",
+  mode: "light",
   setTheme: () => null,
+  setMode: () => null,
 }
 
 const ThemeProviderContext = createContext<ThemeProviderState>(initialState)
 
 export function ThemeProvider({
   children,
-  defaultTheme = "dark",
+  defaultTheme = "default",
+  defaultMode = "light",
   storageKey = "vite-ui-theme",
   ...props
 }: ThemeProviderProps) {
   const [theme, setTheme] = useState<Theme>(
-    () => (localStorage.getItem(storageKey) as Theme) || defaultTheme
+    () => (localStorage.getItem(`${storageKey}-theme`) as Theme) || defaultTheme
+  )
+  const [mode, setMode] = useState<Mode>(
+    () => (localStorage.getItem(`${storageKey}-mode`) as Mode) || defaultMode
   )
 
   useEffect(() => {
     const root = window.document.documentElement
 
-    root.classList.remove("light", "dark")
+    // Remove all existing theme and mode classes
+    root.classList.remove("default", "twitter", "clude", "vercel", "light", "dark")
 
-    if (theme === "system") {
-      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)")
-        .matches
-        ? "dark"
-        : "light"
-
-      root.classList.add(systemTheme)
-      return
-    }
-
+    // Apply the theme class
     root.classList.add(theme)
-  }, [theme])
+    
+    // Apply the mode class
+    root.classList.add(mode)
+  }, [theme, mode])
 
   const value = {
     theme,
+    mode,
     setTheme: (theme: Theme) => {
-      localStorage.setItem(storageKey, theme)
+      localStorage.setItem(`${storageKey}-theme`, theme)
       setTheme(theme)
+    },
+    setMode: (mode: Mode) => {
+      localStorage.setItem(`${storageKey}-mode`, mode)
+      setMode(mode)
     },
   }
 

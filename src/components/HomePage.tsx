@@ -357,7 +357,7 @@ export function HomePage() {
                         </div>
                         <br />
                         <CardDescription className="">
-                          <p className="font-bold text-white">Bus: {document.bus.registrationNo}</p>
+                          <p className="font-bold dark:text-white text-black">Bus: {document.bus.registrationNo}</p>
                         </CardDescription>
                       </CardHeader>
                       <CardContent className="pt-0">
