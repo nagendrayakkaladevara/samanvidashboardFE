@@ -2,7 +2,6 @@ import * as React from "react"
 import { Home, Settings, User, FileText, Bus, LogOut, AudioLines } from "lucide-react"
 import { useNavigate, useLocation } from "react-router-dom"
 import { toast } from "sonner"
-import { ThemeToggle } from "./theme-toggle"
 import {
   Sidebar,
   SidebarContent,
@@ -43,7 +42,7 @@ const data = {
     },
     {
       title: "Settings",
-      url: "#",
+      url: "/settings",
       icon: Settings,
     },
   ],
@@ -97,7 +96,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       
       <SidebarFooter>
         <div className="flex items-center gap-2 p-2">
-          <ThemeToggle />
           <Button 
             variant="outline" 
             onClick={handleLogout}
