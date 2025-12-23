@@ -1,7 +1,9 @@
 import * as React from "react"
-import { Home, Settings, User, FileText, Bus, LogOut, AudioLines } from "lucide-react"
-import { useNavigate, useLocation } from "react-router-dom"
-import { toast } from "sonner"
+import { Home, Settings, User, FileText, Bus,
+   /* LogOut, */ 
+   AudioLines } from "lucide-react"
+import {  useLocation } from "react-router-dom"
+// import { toast } from "sonner"
 import {
   Sidebar,
   SidebarContent,
@@ -13,9 +15,10 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
-  SidebarFooter,
+  // SidebarFooter,
 } from "@/components/ui/sidebar"
-import { Button } from "@/components/ui/button"
+//  import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 
 // Dashboard navigation data
 const data = {
@@ -24,38 +27,43 @@ const data = {
       title: "Home",
       url: "/home",
       icon: Home,
+      showBadge: true,
     },
     {
       title: "Voice App Access",
       url: "/voice-app-access",
       icon: AudioLines,
+      showBadge: false,
     },
     {
       title: "Documents",
       url: "/documents",
       icon: FileText,
+      showBadge: true,
     },
     {
       title: "Profile",
       url: "#",
       icon: User,
+      showBadge: true,
     },
     {
       title: "Settings",
       url: "/settings",
       icon: Settings,
+      showBadge: true,
     },
   ],
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const navigate = useNavigate()
+  // const navigate = useNavigate()
   const location = useLocation()
 
-  const handleLogout = () => {
-    toast.success("Logged out successfully")
-    navigate('/login')
-  }
+  // const handleLogout = () => {
+  //   toast.success("Logged out successfully")
+  //   navigate('/login')
+  // }
 
   return (
     <Sidebar {...props}>
@@ -82,9 +90,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     asChild 
                     isActive={location.pathname === item.url}
                   >
-                    <a href={item.url} className="flex items-center gap-2">
-                      <item.icon className="size-4" />
-                      {item.title}
+                    <a href={item.url} className="flex items-center justify-between w-full">
+                      <div className="flex items-center gap-2">
+                        <item.icon className="size-4" />
+                        {item.title}
+                      </div>
+                      {item.showBadge && (
+                        <Badge variant="destructive" className="ml-auto">
+                          ignore
+                        </Badge>
+                      )}
                     </a>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -94,7 +109,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarGroup>
       </SidebarContent>
       
-      <SidebarFooter>
+      {/* <SidebarFooter>
         <div className="flex items-center gap-2 p-2">
           <Button 
             variant="outline" 
@@ -105,7 +120,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             Logout
           </Button>
         </div>
-      </SidebarFooter>
+      </SidebarFooter> */}
       
       <SidebarRail />
     </Sidebar>

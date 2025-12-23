@@ -9,7 +9,7 @@ import { SettingsPage } from './components/SettingsPage'
 import { Toaster } from './components/ui/sonner'
 import { ThemeProvider } from './components/theme-provider'
 
-function LoginPage() {
+export function LoginPage() {
   return (
     <div className="grid min-h-svh lg:grid-cols-2">
       <div className="flex flex-col gap-4 p-6 md:p-10">
@@ -45,8 +45,8 @@ function App() {
         <div className="App">
           <Toaster richColors />
           <Routes>
-            <Route path="/" element={<Navigate to="/login" replace />} />
-            <Route path="/login" element={<LoginPage />} />
+            <Route path="/" element={<Navigate to="/voice-app-access" replace />} />
+            <Route path="/login" element={<Navigate to="/voice-app-access" replace />} />
             <Route path="/home" element={<HomePage />} />
             <Route path="/voice-app-access" element={<VoiceAppAccessPage />} />
             <Route path="/documents" element={<DocumentsPage />} />
