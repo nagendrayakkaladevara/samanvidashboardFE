@@ -38,6 +38,7 @@ import { useState, useEffect } from "react"
 import { toast } from "sonner"
 import { Input } from "./ui/input"
 import { Label } from "./ui/label"
+import { Badge } from "./ui/badge"
 
 // Define the User type based on the API response
 type User = {
@@ -61,7 +62,7 @@ export function VoiceAppAccessPage() {
 
     // Form state for adding new user
     const [formData, setFormData] = useState({
-        username: '',
+        username: '', // This is phone number but kept as username for API compatibility
         password: '',
         email: ''
     })
@@ -119,13 +120,13 @@ export function VoiceAppAccessPage() {
             email: ''
         }
 
-        // Username validation
+        // Phone number validation
         if (!formData.username.trim()) {
-            errors.username = 'Username is required'
-        } else if (formData.username.length < 3) {
-            errors.username = 'Username must be at least 3 characters'
-        } else if (!/^[a-zA-Z0-9_]+$/.test(formData.username)) {
-            errors.username = 'Username can only contain letters, numbers, and underscores'
+            errors.username = 'Phone number is required'
+        } else if (!/^[0-9+\-\s()]+$/.test(formData.username)) {
+            errors.username = 'Please enter a valid phone number'
+        } else if (formData.username.replace(/[^0-9]/g, '').length < 10) {
+            errors.username = 'Phone number must contain at least 10 digits'
         }
 
         // Password validation
@@ -135,10 +136,8 @@ export function VoiceAppAccessPage() {
             errors.password = 'Password must be at least 6 characters'
         }
 
-        // Email validation
-        if (!formData.email.trim()) {
-            errors.email = 'Email is required'
-        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+        // Email validation - optional, will default to test@gmail.com
+        if (formData.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
             errors.email = 'Please enter a valid email address'
         }
 
@@ -165,12 +164,18 @@ export function VoiceAppAccessPage() {
         try {
             setIsSubmitting(true)
 
+            // Use default email if not provided
+            const userData = {
+                ...formData,
+                email: formData.email.trim() || 'test@gmail.com'
+            }
+
             const response = await fetch('https://samanvi-backend.vercel.app/api/users', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(formData)
+                body: JSON.stringify(userData)
             })
 
             if (!response.ok) {
@@ -307,7 +312,7 @@ export function VoiceAppAccessPage() {
                             </div>
                             <h1 className="text-3xl font-bold">Voice App Access</h1>
                             <p className="text-muted-foreground">
-                                You can provide access to people to use the Samanvi Route voice app by adding their Username and Password.
+                                You can provide access to people to use the Samanvi Route voice app by adding their Phone Number and Password.
                             </p>
                         </div>
 
@@ -398,7 +403,7 @@ export function VoiceAppAccessPage() {
                                 <TableHeader>
                                     <TableRow className="hover:bg-transparent">
                                         <TableHead className="text-center">User ID</TableHead>
-                                        <TableHead className="text-center">Username</TableHead>
+                                        <TableHead className="text-center">Phone Number</TableHead>
                                         <TableHead className="text-center">Password</TableHead>
                                         <TableHead className="text-center">Email</TableHead>
                                         <TableHead className="text-center">Created Date</TableHead>
@@ -517,18 +522,19 @@ export function VoiceAppAccessPage() {
                             Add New User
                         </AlertDialogTitle>
                         <AlertDialogDescription>
-                            Create a new user account for voice app access. All fields are required.
+                            Create a new user account for voice app access. Phone number and password are required.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
 
                     <div className="space-y-4 py-4">
                         <div>
-                            <Label htmlFor="dialog-username" className="text-sm font-medium">
-                                Username
+                            <Label htmlFor="dialog-username" className="text-sm font-medium flex items-center gap-2">
+                                Phone Number
+                                <Badge variant="destructive" className="text-xs">Required</Badge>
                             </Label>
                             <Input
                                 id="dialog-username"
-                                placeholder="Enter username"
+                                placeholder="Enter phone number"
                                 value={formData.username}
                                 onChange={(e) => handleInputChange('username', e.target.value)}
                                 className={formErrors.username ? 'border-destructive' : ''}
@@ -540,8 +546,9 @@ export function VoiceAppAccessPage() {
                         </div>
 
                         <div>
-                            <Label htmlFor="dialog-password" className="text-sm font-medium">
+                            <Label htmlFor="dialog-password" className="text-sm font-medium flex items-center gap-2">
                                 Password
+                                <Badge variant="destructive" className="text-xs">Required</Badge>
                             </Label>
                             <Input
                                 id="dialog-password"
@@ -559,12 +566,12 @@ export function VoiceAppAccessPage() {
 
                         <div>
                             <Label htmlFor="dialog-email" className="text-sm font-medium">
-                                Email
+                                Email <span className="text-muted-foreground text-xs">(Optional - defaults to test@gmail.com)</span>
                             </Label>
                             <Input
                                 id="dialog-email"
                                 type="email"
-                                placeholder="Enter email address"
+                                placeholder="Enter email address (optional)"
                                 value={formData.email}
                                 onChange={(e) => handleInputChange('email', e.target.value)}
                                 className={formErrors.email ? 'border-destructive' : ''}
