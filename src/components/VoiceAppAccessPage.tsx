@@ -64,7 +64,7 @@ export function VoiceAppAccessPage() {
 
     // Form state for adding new user
     const [formData, setFormData] = useState({
-        username: '',
+        username: '', // This is phone number but kept as username for API compatibility
         password: '',
         email: ''
     })
@@ -129,7 +129,7 @@ export function VoiceAppAccessPage() {
             email: ''
         }
 
-        // Username validation
+        // Phone number validation
         if (!formData.username.trim()) {
             errors.username = 'Username is required'
         } else if (formData.username.trim().length < 3) {
@@ -319,7 +319,7 @@ export function VoiceAppAccessPage() {
                             </div>
                             <h1 className="text-3xl font-bold">Voice App Access</h1>
                             <p className="text-muted-foreground">
-                                You can provide access to people to use the Samanvi Route voice app by adding their Username and Password.
+                                You can provide access to people to use the Samanvi Route voice app by adding their Phone Number and Password.
                             </p>
                         </div>
 
@@ -421,7 +421,7 @@ export function VoiceAppAccessPage() {
                                 <TableHeader>
                                     <TableRow className="hover:bg-transparent">
                                         <TableHead className="text-center">User ID</TableHead>
-                                        <TableHead className="text-center">Username</TableHead>
+                                        <TableHead className="text-center">Phone Number</TableHead>
                                         <TableHead className="text-center">Password</TableHead>
                                         <TableHead className="text-center hidden">Email</TableHead>
                                         <TableHead className="text-center">Created Date</TableHead>
@@ -561,7 +561,7 @@ export function VoiceAppAccessPage() {
                             </div>
                             <Input
                                 id="dialog-username"
-                                placeholder="Enter username"
+                                placeholder="Enter phone number"
                                 value={formData.username}
                                 onChange={(e) => handleInputChange('username', e.target.value)}
                                 className={`h-12 text-base ${formErrors.username ? 'border-destructive focus-visible:ring-destructive' : 'border-input'}`}
