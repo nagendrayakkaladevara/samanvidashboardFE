@@ -264,24 +264,45 @@ export function VoiceAppAccessPage() {
 
     // Handle share user credentials
     const handleShare = async (username: string, password: string) => {
-        const shareText = `Hey 👋
+        // const shareText = `Hey 👋
 
-Below are the credentials for the Samanvi Route Voice App:
+        // Below are the credentials for the *Samanvi Route Voice App*:
+        
+        // 🔐 *Username:* ${username}
+        // 🔑 *Password:* ${password}
+        
+        // 📌 *Rules & Guidelines:*
+        
+        // 1️⃣ Do *not* share the app or your credentials with anyone *outside the organization* 🚫
+        
+        // 2️⃣ While using the app, your phone must be on *silent mode* 🔕 and the *media volume should be set to 60%* 🔊
+        
+        // 3️⃣ Do *not* play the same audio *more than 3 times* 🔁
+        
+        // 4️⃣ The app will *automatically log out every 2 days* ⏳
+        
+        // Please follow the above rules strictly. Thank you! 🙏`;
 
-🔐 Username: ${username}
-🔑 Password: ${password}
+        const shareText = `Hey 👋  
 
-📌 Rules & Guidelines:
+Here are your login details for the *Samanvi Route Voice App*:
 
-1️⃣ Do not share the app or your credentials with anyone outside the organization 🚫
+🔐 *Username:* ${username}  
+🔑 *Password:* ${password}  
 
-2️⃣ While using the app, your phone must be on silent mode 🔕 and the media volume should be set to 60% 🔊
+📌 *Important Usage Guidelines:*  
 
-3️⃣ Do not play the same audio more than 3 times 🔁
+1️⃣ *Confidentiality is mandatory* — do not share the app or your credentials with anyone outside the organization 🚫  
 
-4️⃣ The app will automatically log out every 2 hours ⏳
+2️⃣ While using the app, keep your phone on *silent mode* 🔕 and ensure the *media volume is set to 60%* 🔊  
 
-Please follow the above rules strictly. Thank you! 🙏`
+3️⃣ Avoid repeating the same audio — it should *not be played more than 3 times* 🔁  
+
+4️⃣ For security reasons, the app will *automatically log out every 2 days* ⏳  
+
+Please ensure all the above guidelines are followed strictly.  
+Thank you for your cooperation! 🙏
+`
 
         try {
             // Check if Web Share API is available (mobile devices)
@@ -538,34 +559,34 @@ Please follow the above rules strictly. Thank you! 🙏`
                                                                 <span className="sr-only">Delete user {user.username}</span>
                                                             </Button>
                                                         </AlertDialogTrigger>
-                                                    <AlertDialogContent>
-                                                        <AlertDialogHeader>
-                                                            <AlertDialogTitle>Delete User</AlertDialogTitle>
-                                                            <AlertDialogDescription>
-                                                                Are you sure you want to delete user <strong>"{user.username}"</strong>?
-                                                                This action cannot be undone and will permanently remove the user
-                                                                and their data from the system.
-                                                            </AlertDialogDescription>
-                                                        </AlertDialogHeader>
-                                                        <AlertDialogFooter>
-                                                            <AlertDialogCancel onClick={cancelDelete}>Cancel</AlertDialogCancel>
-                                                            <AlertDialogAction
-                                                                onClick={confirmDelete}
-                                                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                                                disabled={deletingId === user.id}
-                                                            >
-                                                                {deletingId === user.id ? (
-                                                                    <>
-                                                                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                                                                        Deleting...
-                                                                    </>
-                                                                ) : (
-                                                                    'Delete User'
-                                                                )}
-                                                            </AlertDialogAction>
-                                                        </AlertDialogFooter>
-                                                    </AlertDialogContent>
-                                                </AlertDialog>
+                                                        <AlertDialogContent>
+                                                            <AlertDialogHeader>
+                                                                <AlertDialogTitle>Delete User</AlertDialogTitle>
+                                                                <AlertDialogDescription>
+                                                                    Are you sure you want to delete user <strong>"{user.username}"</strong>?
+                                                                    This action cannot be undone and will permanently remove the user
+                                                                    and their data from the system.
+                                                                </AlertDialogDescription>
+                                                            </AlertDialogHeader>
+                                                            <AlertDialogFooter>
+                                                                <AlertDialogCancel onClick={cancelDelete}>Cancel</AlertDialogCancel>
+                                                                <AlertDialogAction
+                                                                    onClick={confirmDelete}
+                                                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                                                    disabled={deletingId === user.id}
+                                                                >
+                                                                    {deletingId === user.id ? (
+                                                                        <>
+                                                                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                                                            Deleting...
+                                                                        </>
+                                                                    ) : (
+                                                                        'Delete User'
+                                                                    )}
+                                                                </AlertDialogAction>
+                                                            </AlertDialogFooter>
+                                                        </AlertDialogContent>
+                                                    </AlertDialog>
                                                 </div>
                                             </TableCell>
                                         </TableRow>
@@ -622,7 +643,7 @@ Please follow the above rules strictly. Thank you! 🙏`
                             </div>
                             <Input
                                 id="dialog-username"
-                                placeholder="Enter phone number"
+                                placeholder="Enter username"
                                 value={formData.username}
                                 onChange={(e) => handleInputChange('username', e.target.value)}
                                 className={`h-12 text-base ${formErrors.username ? 'border-destructive focus-visible:ring-destructive' : 'border-input'}`}
@@ -693,7 +714,7 @@ Please follow the above rules strictly. Thank you! 🙏`
                     {/* Footer Section */}
                     <div className="px-6 py-4 sm:px-8 sm:py-6 bg-muted/30 border-t w-full">
                         <AlertDialogFooter className="flex-col-reverse sm:flex-row gap-3 sm:gap-3 m-0 p-0">
-                            <AlertDialogCancel 
+                            <AlertDialogCancel
                                 disabled={isSubmitting}
                                 className="w-full sm:w-auto h-11 sm:h-11 m-0"
                             >
