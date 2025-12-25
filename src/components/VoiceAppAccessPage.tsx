@@ -14,7 +14,7 @@ import {
     SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
-import { AudioLines, Mic, Settings, Volume2, Loader2, User, Trash2, Plus, Book, Palette } from "lucide-react"
+import { AudioLines, Mic, Settings, Volume2, Loader2, User, Trash2, Plus, Book, Palette, Share2 } from "lucide-react"
 import {
     Table,
     TableBody,
@@ -262,6 +262,55 @@ export function VoiceAppAccessPage() {
         setUserToDelete(null)
     }
 
+    // Handle share user credentials
+    const handleShare = async (username: string, password: string) => {
+        const shareText = `Hey 👋
+
+Below are the credentials for the Samanvi Route Voice App:
+
+🔐 Username: ${username}
+🔑 Password: ${password}
+
+📌 Rules & Guidelines:
+
+1️⃣ Do not share the app or your credentials with anyone outside the organization 🚫
+
+2️⃣ While using the app, your phone must be on silent mode 🔕 and the media volume should be set to 60% 🔊
+
+3️⃣ Do not play the same audio more than 3 times 🔁
+
+4️⃣ The app will automatically log out every 2 hours ⏳
+
+Please follow the above rules strictly. Thank you! 🙏`
+
+        try {
+            // Check if Web Share API is available (mobile devices)
+            if (navigator.share) {
+                await navigator.share({
+                    title: 'Samanvi Route Voice App Credentials',
+                    text: shareText,
+                })
+                toast.success('Credentials shared successfully')
+            } else {
+                // Fallback: Copy to clipboard
+                await navigator.clipboard.writeText(shareText)
+                toast.success('Credentials copied to clipboard')
+            }
+        } catch (err) {
+            // User cancelled or error occurred
+            if (err instanceof Error && err.name !== 'AbortError') {
+                // Try clipboard as fallback
+                try {
+                    await navigator.clipboard.writeText(shareText)
+                    toast.success('Credentials copied to clipboard')
+                } catch (clipboardErr) {
+                    toast.error('Failed to share credentials')
+                    console.error('Error sharing:', clipboardErr)
+                }
+            }
+        }
+    }
+
     // Handle add user dialog close
     const handleAddUserDialogClose = (open: boolean) => {
         setShowAddUserDialog(open)
@@ -420,7 +469,7 @@ export function VoiceAppAccessPage() {
                             <Table>
                                 <TableHeader>
                                     <TableRow className="hover:bg-transparent">
-                                        <TableHead className="text-center">User ID</TableHead>
+                                        <TableHead className="text-center hidden">User ID</TableHead>
                                         <TableHead className="text-center">Phone Number</TableHead>
                                         <TableHead className="text-center">Password</TableHead>
                                         <TableHead className="text-center hidden">Email</TableHead>
@@ -432,7 +481,7 @@ export function VoiceAppAccessPage() {
                                 <TableBody>
                                     {users.map((user) => (
                                         <TableRow key={user.id}>
-                                            <TableCell className="text-center">
+                                            <TableCell className="text-center hidden">
                                                 <div className="flex items-center justify-center gap-3">
                                                     <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
                                                         <User className="h-5 w-5 text-primary" />
@@ -461,23 +510,34 @@ export function VoiceAppAccessPage() {
                                                 )}
                                             </TableCell>
                                             <TableCell className="text-right">
-                                                <AlertDialog open={userToDelete?.id === user.id} onOpenChange={(open) => !open && cancelDelete()}>
-                                                    <AlertDialogTrigger asChild>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={() => handleDeleteClick(user.id, user.username)}
-                                                            disabled={deletingId === user.id}
-                                                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                                                        >
-                                                            {deletingId === user.id ? (
-                                                                <Loader2 className="h-4 w-4 animate-spin" />
-                                                            ) : (
-                                                                <Trash2 className="h-4 w-4" />
-                                                            )}
-                                                            <span className="sr-only">Delete user {user.username}</span>
-                                                        </Button>
-                                                    </AlertDialogTrigger>
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <Button
+                                                        variant="secondary"
+                                                        size="sm"
+                                                        onClick={() => handleShare(user.username, user.password)}
+                                                        className="hover:bg-primary/10"
+                                                        title="Share credentials"
+                                                    >
+                                                        <Share2 className="h-4 w-4" />
+                                                        <span className="sr-only">Share credentials for {user.username}</span>
+                                                    </Button>
+                                                    <AlertDialog open={userToDelete?.id === user.id} onOpenChange={(open) => !open && cancelDelete()}>
+                                                        <AlertDialogTrigger asChild>
+                                                            <Button
+                                                                variant="destructive"
+                                                                size="sm"
+                                                                onClick={() => handleDeleteClick(user.id, user.username)}
+                                                                disabled={deletingId === user.id}
+                                                                className="text-white hover:text-destructive hover:bg-destructive/10"
+                                                            >
+                                                                {deletingId === user.id ? (
+                                                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                                                ) : (
+                                                                    <Trash2 className="h-4 w-4" />
+                                                                )}
+                                                                <span className="sr-only">Delete user {user.username}</span>
+                                                            </Button>
+                                                        </AlertDialogTrigger>
                                                     <AlertDialogContent>
                                                         <AlertDialogHeader>
                                                             <AlertDialogTitle>Delete User</AlertDialogTitle>
@@ -506,6 +566,7 @@ export function VoiceAppAccessPage() {
                                                         </AlertDialogFooter>
                                                     </AlertDialogContent>
                                                 </AlertDialog>
+                                                </div>
                                             </TableCell>
                                         </TableRow>
                                     ))}
