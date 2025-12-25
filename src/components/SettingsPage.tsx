@@ -429,12 +429,7 @@ export function SettingsPage() {
                                 <CardContent className="space-y-6">
                                     <div className="space-y-4">
                                         <div className="space-y-2">
-                                            <div className="flex items-center justify-center gap-2">
-                                                <Label htmlFor="theme">Theme</Label>
-                                                <Badge variant="default" className="bg-blue-500 hover:bg-blue-600 text-white">
-                                                    You can change the theme here
-                                                </Badge>
-                                            </div>
+                                            <Label htmlFor="theme">Theme</Label>
                                             <div className="flex items-center gap-2">
                                                 <Palette className="h-4 w-4 text-muted-foreground" />
                                                 <Select value={theme} onValueChange={(value) => setTheme(value as any)}>
@@ -467,7 +462,7 @@ export function SettingsPage() {
                             </Card>
 
                             {/* Performance Card */}
-                            <Card>
+                            {/* <Card>
                                 <CardHeader>
                                     <div className="flex items-center justify-center gap-2">
                                         <CardTitle>Performance</CardTitle>
@@ -523,10 +518,10 @@ export function SettingsPage() {
                                         )}
                                     </div>
                                 </CardContent>
-                            </Card>
+                            </Card> */}
 
                             {/* Data Management Card */}
-                            <Card>
+                            {/* <Card>
                                 <CardHeader>
                                     <div className="flex items-center justify-center gap-2">
                                         <CardTitle>Data Management</CardTitle>
@@ -575,7 +570,7 @@ export function SettingsPage() {
                                         </Button>
                                     </div>
                                 </CardContent>
-                            </Card>
+                            </Card> */}
                         </TabsContent>
                     </Tabs>
                 </div>
