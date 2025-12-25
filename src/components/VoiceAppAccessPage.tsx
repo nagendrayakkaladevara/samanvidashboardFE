@@ -14,7 +14,7 @@ import {
     SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
-import { AudioLines, Mic, Settings, Volume2, Loader2, User, Trash2, Plus, Book } from "lucide-react"
+import { AudioLines, Mic, Settings, Volume2, Loader2, User, Trash2, Plus, Book, Palette } from "lucide-react"
 import {
     Table,
     TableBody,
@@ -35,6 +35,7 @@ import {
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { useState, useEffect } from "react"
+import { useNavigate } from "react-router-dom"
 import { toast } from "sonner"
 import { Input } from "./ui/input"
 import { Label } from "./ui/label"
@@ -52,6 +53,7 @@ type User = {
 }
 
 export function VoiceAppAccessPage() {
+    const navigate = useNavigate()
     const [users, setUsers] = useState<User[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -62,7 +64,7 @@ export function VoiceAppAccessPage() {
 
     // Form state for adding new user
     const [formData, setFormData] = useState({
-        username: '', // This is phone number but kept as username for API compatibility
+        username: '',
         password: '',
         email: ''
     })
@@ -112,6 +114,13 @@ export function VoiceAppAccessPage() {
         fetchUsers()
     }, [])
 
+    // Generate random email
+    const generateRandomEmail = () => {
+        const randomString = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
+        const timestamp = Date.now()
+        return `user_${randomString}_${timestamp}@samanvi.app`
+    }
+
     // Form validation
     const validateForm = () => {
         const errors = {
@@ -120,13 +129,11 @@ export function VoiceAppAccessPage() {
             email: ''
         }
 
-        // Phone number validation
+        // Username validation
         if (!formData.username.trim()) {
-            errors.username = 'Phone number is required'
-        } else if (!/^[0-9+\-\s()]+$/.test(formData.username)) {
-            errors.username = 'Please enter a valid phone number'
-        } else if (formData.username.replace(/[^0-9]/g, '').length < 10) {
-            errors.username = 'Phone number must contain at least 10 digits'
+            errors.username = 'Username is required'
+        } else if (formData.username.trim().length < 3) {
+            errors.username = 'Username must be at least 3 characters'
         }
 
         // Password validation
@@ -136,7 +143,7 @@ export function VoiceAppAccessPage() {
             errors.password = 'Password must be at least 6 characters'
         }
 
-        // Email validation - optional, will default to test@gmail.com
+        // Email validation - optional, will auto-generate if not provided
         if (formData.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
             errors.email = 'Please enter a valid email address'
         }
@@ -164,10 +171,10 @@ export function VoiceAppAccessPage() {
         try {
             setIsSubmitting(true)
 
-            // Use default email if not provided
+            // Generate random email if not provided
             const userData = {
                 ...formData,
-                email: formData.email.trim() || 'test@gmail.com'
+                email: formData.email.trim() || generateRandomEmail()
             }
 
             const response = await fetch('https://samanvi-backend.vercel.app/api/users', {
@@ -312,7 +319,7 @@ export function VoiceAppAccessPage() {
                             </div>
                             <h1 className="text-3xl font-bold">Voice App Access</h1>
                             <p className="text-muted-foreground">
-                                You can provide access to people to use the Samanvi Route voice app by adding their Phone Number and Password.
+                                You can provide access to people to use the Samanvi Route voice app by adding their Username and Password.
                             </p>
                         </div>
 
@@ -362,14 +369,25 @@ export function VoiceAppAccessPage() {
                         <Book className="h-4 w-4" />
                         Rules
                     </Button>
-                    <Button
-                        onClick={() => setShowAddUserDialog(true)}
-                        className="gap-2"
-                        variant="outline"
-                    >
-                        <Plus className="h-4 w-4" />
-                        Add User
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        <Button
+                            onClick={() => setShowAddUserDialog(true)}
+                            className="gap-2"
+                            variant="outline"
+                        >
+                            <Plus className="h-4 w-4" />
+                            Add User
+                        </Button>
+                        <Button
+                            onClick={() => navigate('/settings?tab=system')}
+                            size="icon"
+                            variant="outline"
+                            className="h-9 w-9"
+                            title="Go to Appearance Settings"
+                        >
+                            <Palette className="h-4 w-4" />
+                        </Button>
+                    </div>
                 </div>
 
                 <div className="">
@@ -403,9 +421,9 @@ export function VoiceAppAccessPage() {
                                 <TableHeader>
                                     <TableRow className="hover:bg-transparent">
                                         <TableHead className="text-center">User ID</TableHead>
-                                        <TableHead className="text-center">Phone Number</TableHead>
+                                        <TableHead className="text-center">Username</TableHead>
                                         <TableHead className="text-center">Password</TableHead>
-                                        <TableHead className="text-center">Email</TableHead>
+                                        <TableHead className="text-center hidden">Email</TableHead>
                                         <TableHead className="text-center">Created Date</TableHead>
                                         <TableHead className="text-center">Status</TableHead>
                                         <TableHead className="text-right">Actions</TableHead>
@@ -429,7 +447,7 @@ export function VoiceAppAccessPage() {
                                                 </div> */}
                                             </TableCell>
                                             <TableCell className="text-center">{user.password}</TableCell>
-                                            <TableCell className="text-center">{user.email}</TableCell>
+                                            <TableCell className="text-center hidden">{user.email}</TableCell>
                                             <TableCell className="text-center">{formatDate(user.createdAt)}</TableCell>
                                             <TableCell className="text-center">
                                                 {user.isActive ? (
@@ -493,7 +511,7 @@ export function VoiceAppAccessPage() {
                                     ))}
                                 </TableBody>
                             </Table>
-                            <div className="mt-4 flex items-center justify-between">
+                            <div className="mt-4 flex items-center justify-between px-4 sm:px-6">
                                 <p className="text-muted-foreground text-sm">
                                     Showing {users.length} user{users.length !== 1 ? 's' : ''} with voice app access
                                 </p>
@@ -515,96 +533,130 @@ export function VoiceAppAccessPage() {
 
             {/* Add User Dialog */}
             <AlertDialog open={showAddUserDialog} onOpenChange={handleAddUserDialogClose}>
-                <AlertDialogContent className="sm:max-w-md">
-                    <AlertDialogHeader>
-                        <AlertDialogTitle className="flex items-center gap-2">
-                            <Plus className="h-5 w-5" />
-                            Add New User
-                        </AlertDialogTitle>
-                        <AlertDialogDescription>
-                            Create a new user account for voice app access. Phone number and password are required.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
+                <AlertDialogContent className="sm:max-w-xl w-full max-w-[calc(100vw-1rem)] p-0 gap-0">
+                    {/* Header Section */}
+                    <div className="px-6 pt-6 pb-4 sm:px-8 sm:pt-8 bg-gradient-to-br from-primary/5 to-primary/10">
+                        <AlertDialogHeader className="space-y-2">
+                            <AlertDialogTitle className="flex items-center gap-3 text-2xl sm:text-3xl font-bold">
+                                <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-primary/20 flex items-center justify-center">
+                                    <Plus className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+                                </div>
+                                Add New User
+                            </AlertDialogTitle>
+                            <AlertDialogDescription className="text-sm sm:text-base text-muted-foreground pt-2">
+                                Create a new user account for voice app access
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                    </div>
 
-                    <div className="space-y-4 py-4">
-                        <div>
-                            <Label htmlFor="dialog-username" className="text-sm font-medium flex items-center gap-2">
-                                Phone Number
+                    {/* Form Section */}
+                    <div className="px-6 py-6 sm:px-8 sm:py-8 space-y-6">
+                        {/* Username Field */}
+                        <div className="space-y-2.5">
+                            <div className="flex items-center justify-between">
+                                <Label htmlFor="dialog-username" className="text-base sm:text-lg font-semibold">
+                                    Username
+                                </Label>
                                 <Badge variant="destructive" className="text-xs">Required</Badge>
-                            </Label>
+                            </div>
                             <Input
                                 id="dialog-username"
-                                placeholder="Enter phone number"
+                                placeholder="Enter username"
                                 value={formData.username}
                                 onChange={(e) => handleInputChange('username', e.target.value)}
-                                className={formErrors.username ? 'border-destructive' : ''}
+                                className={`h-12 text-base ${formErrors.username ? 'border-destructive focus-visible:ring-destructive' : 'border-input'}`}
                                 disabled={isSubmitting}
                             />
                             {formErrors.username && (
-                                <p className="text-destructive text-xs mt-1">{formErrors.username}</p>
+                                <p className="text-destructive text-sm mt-1.5 flex items-center gap-1.5">
+                                    <span className="text-xs">⚠</span>
+                                    {formErrors.username}
+                                </p>
                             )}
                         </div>
 
-                        <div>
-                            <Label htmlFor="dialog-password" className="text-sm font-medium flex items-center gap-2">
-                                Password
+                        {/* Password Field */}
+                        <div className="space-y-2.5">
+                            <div className="flex items-center justify-between">
+                                <Label htmlFor="dialog-password" className="text-base sm:text-lg font-semibold">
+                                    Password
+                                </Label>
                                 <Badge variant="destructive" className="text-xs">Required</Badge>
-                            </Label>
+                            </div>
                             <Input
                                 id="dialog-password"
                                 type="password"
                                 placeholder="Enter password"
                                 value={formData.password}
                                 onChange={(e) => handleInputChange('password', e.target.value)}
-                                className={formErrors.password ? 'border-destructive' : ''}
+                                className={`h-12 text-base ${formErrors.password ? 'border-destructive focus-visible:ring-destructive' : 'border-input'}`}
                                 disabled={isSubmitting}
                             />
                             {formErrors.password && (
-                                <p className="text-destructive text-xs mt-1">{formErrors.password}</p>
+                                <p className="text-destructive text-sm mt-1.5 flex items-center gap-1.5">
+                                    <span className="text-xs">⚠</span>
+                                    {formErrors.password}
+                                </p>
                             )}
                         </div>
 
-                        <div>
-                            <Label htmlFor="dialog-email" className="text-sm font-medium">
-                                Email <span className="text-muted-foreground text-xs">(Optional - defaults to test@gmail.com)</span>
-                            </Label>
+                        {/* Email Field */}
+                        <div className="space-y-2.5 hidden">
+                            <div className="flex items-center justify-between">
+                                <Label htmlFor="dialog-email" className="text-base sm:text-lg font-semibold">
+                                    Email
+                                </Label>
+                                <Badge variant="outline" className="text-xs text-muted-foreground">Optional</Badge>
+                            </div>
                             <Input
                                 id="dialog-email"
                                 type="email"
-                                placeholder="Enter email address (optional)"
+                                placeholder="Enter email (auto-generated if empty)"
                                 value={formData.email}
                                 onChange={(e) => handleInputChange('email', e.target.value)}
-                                className={formErrors.email ? 'border-destructive' : ''}
+                                className={`h-12 text-base ${formErrors.email ? 'border-destructive focus-visible:ring-destructive' : 'border-input'}`}
                                 disabled={isSubmitting}
                             />
+                            <p className="text-xs text-muted-foreground mt-1">
+                                Email will be automatically generated if not provided
+                            </p>
                             {formErrors.email && (
-                                <p className="text-destructive text-xs mt-1">{formErrors.email}</p>
+                                <p className="text-destructive text-sm mt-1.5 flex items-center gap-1.5">
+                                    <span className="text-xs">⚠</span>
+                                    {formErrors.email}
+                                </p>
                             )}
                         </div>
                     </div>
 
-                    <AlertDialogFooter>
-                        <AlertDialogCancel disabled={isSubmitting}>
-                            Cancel
-                        </AlertDialogCancel>
-                        <Button
-                            onClick={handleAddUser}
-                            disabled={isSubmitting}
-                            className="gap-2"
-                        >
-                            {isSubmitting ? (
-                                <>
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                    Creating...
-                                </>
-                            ) : (
-                                <>
-                                    <Plus className="h-4 w-4" />
-                                    Create User
-                                </>
-                            )}
-                        </Button>
-                    </AlertDialogFooter>
+                    {/* Footer Section */}
+                    <div className="px-6 py-4 sm:px-8 sm:py-6 bg-muted/30 border-t w-full">
+                        <AlertDialogFooter className="flex-col-reverse sm:flex-row gap-3 sm:gap-3 m-0 p-0">
+                            <AlertDialogCancel 
+                                disabled={isSubmitting}
+                                className="w-full sm:w-auto h-11 sm:h-11 m-0"
+                            >
+                                Cancel
+                            </AlertDialogCancel>
+                            <Button
+                                onClick={handleAddUser}
+                                disabled={isSubmitting}
+                                className="gap-2 w-full sm:w-auto h-11 sm:h-11"
+                            >
+                                {isSubmitting ? (
+                                    <>
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                        Creating User...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Plus className="h-4 w-4" />
+                                        Create User
+                                    </>
+                                )}
+                            </Button>
+                        </AlertDialogFooter>
+                    </div>
                 </AlertDialogContent>
             </AlertDialog>
 
