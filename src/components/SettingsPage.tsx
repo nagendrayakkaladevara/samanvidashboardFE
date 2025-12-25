@@ -418,135 +418,156 @@ export function SettingsPage() {
 
                         {/* System Settings */}
                         <TabsContent value="system" className="space-y-6">
+                            {/* Appearance Card */}
                             <Card>
                                 <CardHeader>
-                                    <CardTitle>System Preferences</CardTitle>
+                                    <CardTitle>Appearance</CardTitle>
                                     <CardDescription>
-                                        Configure system-wide settings and preferences.
+                                        Customize the look and feel of the application.
                                     </CardDescription>
                                 </CardHeader>
                                 <CardContent className="space-y-6">
-                                    {/* Appearance */}
                                     <div className="space-y-4">
-                                        <h3 className="text-lg font-semibold">Appearance</h3>
-                                        <div className="space-y-4">
-                                            <div className="space-y-2">
+                                        <div className="space-y-2">
+                                            <div className="flex items-center justify-center gap-2">
                                                 <Label htmlFor="theme">Theme</Label>
-                                                <div className="flex items-center gap-2">
-                                                    <Palette className="h-4 w-4 text-muted-foreground" />
-                                                    <Select value={theme} onValueChange={(value) => setTheme(value as any)}>
-                                                        <SelectTrigger>
-                                                            <SelectValue placeholder="Select theme" />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            <SelectItem value="default">Default</SelectItem>
-                                                            <SelectItem value="twitter">Twitter</SelectItem>
-                                                            <SelectItem value="clude">Clude</SelectItem>
-                                                            <SelectItem value="vercel">Vercel</SelectItem>
-                                                        </SelectContent>
-                                                    </Select>
-                                                </div>
+                                                <Badge variant="default" className="bg-blue-500 hover:bg-blue-600 text-white">
+                                                    You can change the theme here
+                                                </Badge>
                                             </div>
-                                            <div className="flex items-center justify-between">
-                                                <div className="space-y-0.5">
-                                                    <Label className="text-sm font-medium flex flex-start">Dark Mode</Label>
-                                                    <p className="text-sm text-muted-foreground">
-                                                        Switch between light and dark appearance
-                                                    </p>
-                                                </div>
-                                                <Switch
-                                                    checked={mode === "dark"}
-                                                    onCheckedChange={(checked) => setMode(checked ? "dark" : "light")}
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <Separator />
-
-                                    {/* Performance */}
-                                    <div className="space-y-4">
-                                        <h3 className="text-lg font-semibold">Performance</h3>
-                                        <div className="space-y-4">
-                                            <div className="flex items-center justify-between">
-                                                <div className="space-y-0.5">
-                                                    <Label className="text-sm font-medium flex flex-start">Performance Mode</Label>
-                                                    <p className="text-sm text-muted-foreground">
-                                                        Optimize for better performance (may use more resources)
-                                                    </p>
-                                                </div>
-                                                <Switch
-                                                    checked={systemSettings.performanceMode}
-                                                    onCheckedChange={(checked) => setSystemSettings({ ...systemSettings, performanceMode: checked })}
-                                                />
-                                            </div>
-                                            <div className="flex items-center justify-between">
-                                                <div className="space-y-0.5">
-                                                    <Label className="text-sm font-medium flex flex-start">Auto Refresh</Label>
-                                                    <p className="text-sm text-muted-foreground">
-                                                        Automatically refresh data at regular intervals
-                                                    </p>
-                                                </div>
-                                                <Switch
-                                                    checked={systemSettings.autoRefresh}
-                                                    onCheckedChange={(checked) => setSystemSettings({ ...systemSettings, autoRefresh: checked })}
-                                                />
-                                            </div>
-                                            {systemSettings.autoRefresh && (
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="refreshInterval">Refresh Interval (minutes)</Label>
-                                                    <Select value={systemSettings.refreshInterval} onValueChange={(value) => setSystemSettings({ ...systemSettings, refreshInterval: value })}>
-                                                        <SelectTrigger>
-                                                            <SelectValue placeholder="Select interval" />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            <SelectItem value="1">1 minute</SelectItem>
-                                                            <SelectItem value="5">5 minutes</SelectItem>
-                                                            <SelectItem value="10">10 minutes</SelectItem>
-                                                            <SelectItem value="30">30 minutes</SelectItem>
-                                                        </SelectContent>
-                                                    </Select>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    <Separator />
-
-                                    {/* Data Management */}
-                                    <div className="space-y-4">
-                                        <h3 className="text-lg font-semibold">Data Management</h3>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div className="space-y-2">
-                                                <Label htmlFor="dataRetention">Data Retention (days)</Label>
-                                                <Select value={systemSettings.dataRetention} onValueChange={(value) => setSystemSettings({ ...systemSettings, dataRetention: value })}>
+                                            <div className="flex items-center gap-2">
+                                                <Palette className="h-4 w-4 text-muted-foreground" />
+                                                <Select value={theme} onValueChange={(value) => setTheme(value as any)}>
                                                     <SelectTrigger>
-                                                        <SelectValue placeholder="Select retention" />
+                                                        <SelectValue placeholder="Select theme" />
                                                     </SelectTrigger>
                                                     <SelectContent>
-                                                        <SelectItem value="30">30 days</SelectItem>
-                                                        <SelectItem value="90">90 days</SelectItem>
-                                                        <SelectItem value="180">180 days</SelectItem>
-                                                        <SelectItem value="365">1 year</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="backupFrequency">Backup Frequency</Label>
-                                                <Select value={systemSettings.backupFrequency} onValueChange={(value) => setSystemSettings({ ...systemSettings, backupFrequency: value })}>
-                                                    <SelectTrigger>
-                                                        <SelectValue placeholder="Select frequency" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="daily">Daily</SelectItem>
-                                                        <SelectItem value="weekly">Weekly</SelectItem>
-                                                        <SelectItem value="monthly">Monthly</SelectItem>
+                                                        <SelectItem value="default">Default</SelectItem>
+                                                        <SelectItem value="twitter">Twitter</SelectItem>
+                                                        <SelectItem value="clude">Clude</SelectItem>
+                                                        <SelectItem value="vercel">Vercel</SelectItem>
                                                     </SelectContent>
                                                 </Select>
                                             </div>
                                         </div>
+                                        <div className="flex items-center justify-between">
+                                            <div className="space-y-0.5">
+                                                <Label className="text-sm font-medium flex flex-start">Dark Mode</Label>
+                                                <p className="text-sm text-muted-foreground">
+                                                    Switch between light and dark appearance
+                                                </p>
+                                            </div>
+                                            <Switch
+                                                checked={mode === "dark"}
+                                                onCheckedChange={(checked) => setMode(checked ? "dark" : "light")}
+                                            />
+                                        </div>
                                     </div>
+                                </CardContent>
+                            </Card>
 
+                            {/* Performance Card */}
+                            <Card>
+                                <CardHeader>
+                                    <div className="flex items-center justify-center gap-2">
+                                        <CardTitle>Performance</CardTitle>
+                                        <Badge variant="destructive" className="bg-red-500 hover:bg-red-600 text-white">
+                                            This is a Dummy settings Please ignore
+                                        </Badge>
+                                    </div>
+                                    <CardDescription>
+                                        Optimize application performance and refresh settings.
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent className="space-y-6">
+                                    <div className="space-y-4">
+                                        <div className="flex items-center justify-between">
+                                            <div className="space-y-0.5">
+                                                <Label className="text-sm font-medium flex flex-start">Performance Mode</Label>
+                                                <p className="text-sm text-muted-foreground">
+                                                    Optimize for better performance (may use more resources)
+                                                </p>
+                                            </div>
+                                            <Switch
+                                                checked={systemSettings.performanceMode}
+                                                onCheckedChange={(checked) => setSystemSettings({ ...systemSettings, performanceMode: checked })}
+                                            />
+                                        </div>
+                                        <div className="flex items-center justify-between">
+                                            <div className="space-y-0.5">
+                                                <Label className="text-sm font-medium flex flex-start">Auto Refresh</Label>
+                                                <p className="text-sm text-muted-foreground">
+                                                    Automatically refresh data at regular intervals
+                                                </p>
+                                            </div>
+                                            <Switch
+                                                checked={systemSettings.autoRefresh}
+                                                onCheckedChange={(checked) => setSystemSettings({ ...systemSettings, autoRefresh: checked })}
+                                            />
+                                        </div>
+                                        {systemSettings.autoRefresh && (
+                                            <div className="space-y-2">
+                                                <Label htmlFor="refreshInterval">Refresh Interval (minutes)</Label>
+                                                <Select value={systemSettings.refreshInterval} onValueChange={(value) => setSystemSettings({ ...systemSettings, refreshInterval: value })}>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Select interval" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="1">1 minute</SelectItem>
+                                                        <SelectItem value="5">5 minutes</SelectItem>
+                                                        <SelectItem value="10">10 minutes</SelectItem>
+                                                        <SelectItem value="30">30 minutes</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                        )}
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            {/* Data Management Card */}
+                            <Card>
+                                <CardHeader>
+                                    <div className="flex items-center justify-center gap-2">
+                                        <CardTitle>Data Management</CardTitle>
+                                        <Badge variant="destructive" className="bg-red-500 hover:bg-red-600 text-white">
+                                            This is a Dummy settings Please ignore
+                                        </Badge>
+                                    </div>
+                                    <CardDescription>
+                                        Configure data retention and backup preferences.
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent className="space-y-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="dataRetention">Data Retention (days)</Label>
+                                            <Select value={systemSettings.dataRetention} onValueChange={(value) => setSystemSettings({ ...systemSettings, dataRetention: value })}>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select retention" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="30">30 days</SelectItem>
+                                                    <SelectItem value="90">90 days</SelectItem>
+                                                    <SelectItem value="180">180 days</SelectItem>
+                                                    <SelectItem value="365">1 year</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="backupFrequency">Backup Frequency</Label>
+                                            <Select value={systemSettings.backupFrequency} onValueChange={(value) => setSystemSettings({ ...systemSettings, backupFrequency: value })}>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select frequency" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="daily">Daily</SelectItem>
+                                                    <SelectItem value="weekly">Weekly</SelectItem>
+                                                    <SelectItem value="monthly">Monthly</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    </div>
                                     <div className="flex justify-end">
                                         <Button onClick={handleSystemSave}>
                                             <Save className="h-4 w-4 mr-2" />
