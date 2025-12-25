@@ -74,13 +74,13 @@ export function SettingsPage() {
     })
 
       // System settings state
-  const [systemSettings, setSystemSettings] = useState({
-    autoRefresh: true,
-    refreshInterval: "5",
-    dataRetention: "365",
-    backupFrequency: "daily",
-    performanceMode: false
-  })
+//   const [systemSettings, setSystemSettings] = useState({
+//     autoRefresh: true,
+//     refreshInterval: "5",
+//     dataRetention: "365",
+//     backupFrequency: "daily",
+//     performanceMode: false
+//   })
 
     // Password change state
     const [passwordData, setPasswordData] = useState({
@@ -99,10 +99,10 @@ export function SettingsPage() {
         toast.success("Security settings saved successfully!")
     }
 
-    const handleSystemSave = () => {
-        // Simulate API call
-        toast.success("System preferences updated!")
-    }
+//  const handleSystemSave = () => {
+//         // Simulate API call
+//         toast.success("System preferences updated!")
+//     }
 
     const handlePasswordChange = () => {
         if (passwordData.newPassword !== passwordData.confirmPassword) {
