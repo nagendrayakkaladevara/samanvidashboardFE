@@ -15,7 +15,7 @@ import { Button } from "./ui/button"
 import { Badge } from "./ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
-import { AlertTriangle, Calendar, FileText, Clock, AlertCircle } from "lucide-react"
+import { AlertTriangle, Calendar, FileText, Clock, AlertCircle, X } from "lucide-react"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
 
@@ -166,6 +166,17 @@ export function HomePage() {
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
+          <div className="ml-auto">
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => toast.info("This page has been ignored")}
+              className="gap-2"
+            >
+              <X className="h-4 w-4" />
+              Ignore This Page
+            </Button>
+          </div>
         </header>
         <div className="flex flex-1 flex-col gap-6 p-6">
           <div className="space-y-2">

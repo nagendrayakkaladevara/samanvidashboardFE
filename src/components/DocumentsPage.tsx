@@ -11,7 +11,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
-import { FileText, Clock, Wrench, EditIcon, Loader2, PenIcon, CalendarIcon, RefreshCw } from "lucide-react"
+import { FileText, Clock, Wrench, EditIcon, Loader2, PenIcon, CalendarIcon, RefreshCw, X } from "lucide-react"
 import { toast } from "sonner"
 import type {
   ColumnDef,
@@ -2803,6 +2803,17 @@ export function DocumentsPage() {
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
+          <div className="ml-auto">
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => toast.info("This page has been ignored")}
+              className="gap-2"
+            >
+              <X className="h-4 w-4" />
+              Ignore This Page
+            </Button>
+          </div>
         </header>
 
         <div className="flex flex-1 flex-col items-center justify-center p-6">

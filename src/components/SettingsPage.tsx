@@ -25,18 +25,35 @@ import {
     Save,
     Eye,
     EyeOff,
-    Palette
+    Palette,
+    X
 } from "lucide-react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useSearchParams } from "react-router-dom"
 import { toast } from "sonner"
 import { useTheme } from "./theme-provider"
 import { Badge } from "./ui/badge"
 
 export function SettingsPage() {
   const { theme, setTheme, mode, setMode } = useTheme()
-  const [activeTab, setActiveTab] = useState("notifications")
+  const [searchParams, setSearchParams] = useSearchParams()
+  const tabFromUrl = searchParams.get('tab')
+  const [activeTab, setActiveTab] = useState(tabFromUrl || "notifications")
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+
+  // Update tab when URL parameter changes
+  useEffect(() => {
+    if (tabFromUrl && ['notifications', 'security', 'system'].includes(tabFromUrl)) {
+      setActiveTab(tabFromUrl)
+    }
+  }, [tabFromUrl])
+
+  // Update URL when tab changes
+  const handleTabChange = (value: string) => {
+    setActiveTab(value)
+    setSearchParams({ tab: value })
+  }
 
     // Notification settings state
     const [notificationSettings, setNotificationSettings] = useState({
@@ -122,6 +139,17 @@ export function SettingsPage() {
                             </BreadcrumbItem>
                         </BreadcrumbList>
                     </Breadcrumb>
+                    <div className="ml-auto">
+                        <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => toast.info("This page has been ignored")}
+                            className="gap-2"
+                        >
+                            <X className="h-4 w-4" />
+                            Ignore This Page
+                        </Button>
+                    </div>
                 </header>
 
                 <div className="flex flex-1 flex-col gap-6 p-6">
@@ -132,7 +160,7 @@ export function SettingsPage() {
                         </p>
                     </div>
 
-                    <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+                    <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
                         <TabsList className="grid w-full grid-cols-3">
                             <TabsTrigger value="notifications" className="flex items-center gap-2">
                                 <Bell className="h-4 w-4" />
