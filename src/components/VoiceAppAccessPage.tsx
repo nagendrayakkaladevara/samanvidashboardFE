@@ -585,7 +585,7 @@ export function VoiceAppAccessPage() {
                             </div>
                             <Input
                                 id="dialog-password"
-                                type="password"
+                                type="text"
                                 placeholder="Enter password"
                                 value={formData.password}
                                 onChange={(e) => handleInputChange('password', e.target.value)}
