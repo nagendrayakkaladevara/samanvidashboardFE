@@ -170,11 +170,11 @@ export function HomePage() {
             <Button
               variant="destructive"
               size="sm"
-              onClick={() => toast.info("This page has been ignored")}
+              onClick={() => toast.info("Please ignore this page")}
               className="gap-2"
             >
               <X className="h-4 w-4" />
-              Ignore This Page
+              Please ignore this page
             </Button>
           </div>
         </header>
