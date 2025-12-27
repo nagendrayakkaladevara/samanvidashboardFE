@@ -421,6 +421,12 @@ Thank you for your cooperation! 🙏
         })
     }
 
+    // Helper function to truncate deviceId
+    const truncateDeviceId = (deviceId: string | null) => {
+        if (!deviceId) return 'Empty'
+        return deviceId.length > 5 ? `${deviceId.substring(0, 5)}...` : deviceId
+    }
+
     return (
         <SidebarProvider>
             <AppSidebar />
@@ -559,6 +565,7 @@ Thank you for your cooperation! 🙏
                                         <TableHead className="text-center">Username</TableHead>
                                         <TableHead className="text-center">Password</TableHead>
                                         <TableHead className="text-center hidden">Email</TableHead>
+                                        <TableHead className="text-center hidden md:table-cell">Device ID</TableHead>
                                         <TableHead className="text-center hidden md:table-cell">Created Date</TableHead>
                                         <TableHead className="text-center hidden md:table-cell">Status</TableHead>
                                         <TableHead className="text-center md:hidden">Info</TableHead>
@@ -583,6 +590,11 @@ Thank you for your cooperation! 🙏
                                                 </div> */}
                                             </TableCell>
                                             <TableCell className="text-center">{user.password}</TableCell>
+                                            <TableCell className="text-center hidden md:table-cell">
+                                                <span className="text-xs font-mono text-muted-foreground">
+                                                    {truncateDeviceId(user.deviceId)}
+                                                </span>
+                                            </TableCell>
                                             <TableCell className="text-center hidden md:table-cell">{formatDate(user.createdAt)}</TableCell>
                                             <TableCell className="text-center hidden md:table-cell">
                                                 {user.status === 'active' ? (
@@ -609,6 +621,12 @@ Thank you for your cooperation! 🙏
                                                     </PopoverTrigger>
                                                     <PopoverContent className="w-auto p-2.5" align="end">
                                                         <div className="flex gap-4">
+                                                            <div className="flex flex-col gap-0.5">
+                                                                <p className="text-xs text-muted-foreground leading-4">Device ID</p>
+                                                                <p className="text-xs font-mono leading-4 text-muted-foreground">
+                                                                    {truncateDeviceId(user.deviceId)}
+                                                                </p>
+                                                            </div>
                                                             <div className="flex flex-col gap-0.5">
                                                                 <p className="text-xs text-muted-foreground leading-4">Created Date</p>
                                                                 <p className="text-xs font-medium leading-4">{formatDate(user.createdAt)}</p>
