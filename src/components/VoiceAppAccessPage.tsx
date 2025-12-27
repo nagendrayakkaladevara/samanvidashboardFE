@@ -344,22 +344,29 @@ export function VoiceAppAccessPage() {
         const shareText = `Hey 👋  
 
 Here are your login details for the *Samanvi Route Voice App*:
+*సమన్వి రూట్ వాయిస్ యాప్* కోసం మీ లాగిన్ వివరాలు ఇవి:
 
 🔐 *Username:* ${username}  
 🔑 *Password:* ${password}  
 
 📌 *Important Usage Guidelines:*  
+📌 కొన్ని సాధారణ సూచనలు:
 
 1️⃣ *Confidentiality is mandatory* — do not share the app or your credentials with anyone outside the organization 🚫  
+1️⃣ మీ లాగిన్ వివరాలు ఎవరితోనూ షేర్ చేయవద్దు. ఇది పూర్తిగా వ్యక్తిగతం 🚫
 
 2️⃣ While using the app, keep your phone on *silent mode* 🔕 and ensure the *media volume is set to 60%* 🔊  
+2️⃣ యాప్ ఉపయోగించే సమయంలో ఫోన్‌ను *సైలెంట్ మోడ్‌లో* ఉంచండి 🔕 మీడియా వాల్యూమ్ సుమారు *60%* ఉంటే సరిపోతుంది 🔊
 
 3️⃣ Avoid repeating the same audio — it should *not be played more than 3 times* 🔁  
+ఒకే ఆడియోను మళ్లీ మళ్లీ ప్లే చేయవద్దు — *గరిష్టంగా 3 సార్లు* మాత్రమే 🔁
 
 4️⃣ For security reasons, the app will *automatically log out every 2 days* ⏳  
+4️⃣ భద్రత కోసం యాప్ *ప్రతి 2 రోజులకు ఒకసారి ఆటోమేటిక్‌గా లాగ్ అవుట్* అవుతుంది ⏳  
 
 Please ensure all the above guidelines are followed strictly.  
 Thank you for your cooperation! 🙏
+ధన్యవాదాలు 🙏
 `
 
         try {
