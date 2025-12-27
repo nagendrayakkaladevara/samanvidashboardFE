@@ -14,7 +14,7 @@ import {
     SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
-import { AudioLines, Mic, Settings, Volume2, Loader2, User, Trash2, Plus, Book, Palette, Share2 } from "lucide-react"
+import { AudioLines, Mic, Settings, Volume2, Loader2, User, Trash2, Plus, Book, Palette, Share2, RotateCcw, Info } from "lucide-react"
 import {
     Table,
     TableBody,
@@ -40,16 +40,32 @@ import { toast } from "sonner"
 import { Input } from "./ui/input"
 import { Label } from "./ui/label"
 import { Badge } from "./ui/badge"
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover"
 
-// Define the User type based on the API response
+// Define the User type based on the V2 API response
 type User = {
-    id: number
+    id: string
     username: string
     password: string
-    email: string
-    isActive: boolean
+    deviceId: string | null
+    status: 'active' | 'blocked'
     createdAt: string
     updatedAt: string
+}
+
+// Base URL and Basic Auth credentials
+const API_BASE_URL = 'https://samanvi-backend.vercel.app'
+const API_USERNAME = 'qwert'
+const API_PASSWORD = '123456'
+
+// Helper function to create Basic Auth header
+const getAuthHeader = () => {
+    const credentials = btoa(`${API_USERNAME}:${API_PASSWORD}`)
+    return `Basic ${credentials}`
 }
 
 export function VoiceAppAccessPage() {
@@ -57,16 +73,17 @@ export function VoiceAppAccessPage() {
     const [users, setUsers] = useState<User[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
-    const [deletingId, setDeletingId] = useState<number | null>(null)
-    const [userToDelete, setUserToDelete] = useState<{ id: number; username: string } | null>(null)
+    const [deletingId, setDeletingId] = useState<string | null>(null)
+    const [userToDelete, setUserToDelete] = useState<{ id: string; username: string } | null>(null)
+    const [resettingId, setResettingId] = useState<string | null>(null)
     const [showAddUserDialog, setShowAddUserDialog] = useState(false)
     const [showRulesDialog, setShowRulesDialog] = useState(false)
 
     // Form state for adding new user
     const [formData, setFormData] = useState({
-        username: '', // This is phone number but kept as username for API compatibility
+        username: '',
         password: '',
-        email: ''
+        email: '' // Email is no longer sent to API, but kept for form state
     })
     const [formErrors, setFormErrors] = useState({
         username: '',
@@ -75,14 +92,18 @@ export function VoiceAppAccessPage() {
     })
     const [isSubmitting, setIsSubmitting] = useState(false)
 
-    // Fetch users from the API
+    // Fetch users from the V2 API
     useEffect(() => {
         const fetchUsers = async () => {
             try {
                 setLoading(true)
                 setError(null)
 
-                const response = await fetch('https://samanvi-backend.vercel.app/api/users')
+                const response = await fetch(`${API_BASE_URL}/api/v2/users?page=1&limit=100&sortBy=createdAt&sortOrder=desc`, {
+                    headers: {
+                        'Authorization': getAuthHeader(),
+                    },
+                })
 
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`)
@@ -90,14 +111,9 @@ export function VoiceAppAccessPage() {
 
                 const data = await response.json()
 
-                if (data.message === "Users fetched successfully" && data.users) {
-                    // Map the API response to include isActive field (defaulting to true since all users in API are active)
-                    const usersWithActiveStatus = data.users.map((user: any) => ({
-                        ...user,
-                        isActive: user.isActive ?? true // Default to true if not provided by API
-                    }))
-                    setUsers(usersWithActiveStatus)
-                    toast.success(`Successfully loaded ${data.users.length} users`)
+                if (data.success && data.data) {
+                    setUsers(data.data)
+                    toast.success(`Successfully loaded ${data.data.length} users`)
                 } else {
                     throw new Error('Invalid API response format')
                 }
@@ -114,12 +130,6 @@ export function VoiceAppAccessPage() {
         fetchUsers()
     }, [])
 
-    // Generate random email
-    const generateRandomEmail = () => {
-        const randomString = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
-        const timestamp = Date.now()
-        return `user_${randomString}_${timestamp}@samanvi.app`
-    }
 
     // Form validation
     const validateForm = () => {
@@ -129,7 +139,7 @@ export function VoiceAppAccessPage() {
             email: ''
         }
 
-        // Phone number validation
+        // Username validation
         if (!formData.username.trim()) {
             errors.username = 'Username is required'
         } else if (formData.username.trim().length < 3) {
@@ -171,16 +181,17 @@ export function VoiceAppAccessPage() {
         try {
             setIsSubmitting(true)
 
-            // Generate random email if not provided
+            // V2 API only requires username and password
             const userData = {
-                ...formData,
-                email: formData.email.trim() || generateRandomEmail()
+                username: formData.username.trim(),
+                password: formData.password
             }
 
-            const response = await fetch('https://samanvi-backend.vercel.app/api/users', {
+            const response = await fetch(`${API_BASE_URL}/api/v2/users`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Authorization': getAuthHeader(),
                 },
                 body: JSON.stringify(userData)
             })
@@ -188,27 +199,30 @@ export function VoiceAppAccessPage() {
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}))
                 if (response.status === 409) {
-                    throw new Error('Username or email already exists')
+                    throw new Error('Username already exists')
                 }
                 throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
             }
 
             const data = await response.json()
 
-            // Add the new user to the local state with isActive: true
-            const newUser = {
-                ...data.user,
-                password: formData.password, // Include password for display
-                isActive: true
+            if (data.success && data.data) {
+                // Add the new user to the local state with password for display
+                const newUser = {
+                    ...data.data,
+                    password: formData.password // Include password for display
+                }
+                setUsers(prev => [newUser, ...prev])
+
+                // Clear form and close dialog
+                setFormData({ username: '', password: '', email: '' })
+                setFormErrors({ username: '', password: '', email: '' })
+                setShowAddUserDialog(false)
+
+                toast.success(`User "${data.data.username}" created successfully`)
+            } else {
+                throw new Error('Invalid API response format')
             }
-            setUsers(prev => [...prev, newUser])
-
-            // Clear form and close dialog
-            setFormData({ username: '', password: '', email: '' })
-            setFormErrors({ username: '', password: '', email: '' })
-            setShowAddUserDialog(false)
-
-            toast.success(`User "${data.user.username}" created successfully`)
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Failed to create user'
             toast.error(`Error creating user: ${errorMessage}`, {
@@ -221,7 +235,7 @@ export function VoiceAppAccessPage() {
     }
 
     // Handle delete button click - opens confirmation dialog
-    const handleDeleteClick = (userId: number, username: string) => {
+    const handleDeleteClick = (userId: string, username: string) => {
         setUserToDelete({ id: userId, username })
     }
 
@@ -232,15 +246,17 @@ export function VoiceAppAccessPage() {
         try {
             setDeletingId(userToDelete.id)
 
-            const response = await fetch(`https://samanvi-backend.vercel.app/api/users/${userToDelete.id}`, {
+            const response = await fetch(`${API_BASE_URL}/api/v2/users/${userToDelete.id}`, {
                 method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Authorization': getAuthHeader(),
                 },
             })
 
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`)
+                const errorData = await response.json().catch(() => ({}))
+                throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
             }
 
             // Remove the deleted user from the local state
@@ -260,6 +276,48 @@ export function VoiceAppAccessPage() {
     // Cancel delete function
     const cancelDelete = () => {
         setUserToDelete(null)
+    }
+
+    // Handle reset deviceId
+    const handleResetDeviceId = async (userId: string, username: string) => {
+        try {
+            setResettingId(userId)
+
+            const response = await fetch(`${API_BASE_URL}/api/v2/users/${userId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': getAuthHeader(),
+                },
+                body: JSON.stringify({ deviceId: null })
+            })
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}))
+                throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
+            }
+
+            const data = await response.json()
+
+            if (data.success && data.data) {
+                // Update the user in the local state
+                setUsers(prevUsers => prevUsers.map(user => 
+                    user.id === userId 
+                        ? { ...user, deviceId: null }
+                        : user
+                ))
+
+                toast.success(`Device ID reset successfully for user "${username}"`)
+            } else {
+                throw new Error('Invalid API response format')
+            }
+        } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : 'Failed to reset device ID'
+            toast.error(`Error resetting device ID: ${errorMessage}`)
+            console.error('Error resetting device ID:', err)
+        } finally {
+            setResettingId(null)
+        }
     }
 
     // Handle share user credentials
@@ -389,7 +447,7 @@ Thank you for your cooperation! 🙏
                             </div>
                             <h1 className="text-3xl font-bold">Voice App Access</h1>
                             <p className="text-muted-foreground">
-                                You can provide access to people to use the Samanvi Route voice app by adding their Phone Number and Password.
+                                You can provide access to people to use the Samanvi Route voice app by adding their Username and Password.
                             </p>
                         </div>
 
@@ -433,13 +491,13 @@ Thank you for your cooperation! 🙏
                 <div className="flex items-center justify-between p-4 border-b">
                     <Button
                         variant="destructive"
-                        className="gap-2"
+                        className="gap-2 hidden"
                         onClick={() => setShowRulesDialog(true)}
                     >
                         <Book className="h-4 w-4" />
                         Rules
                     </Button>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 ml-auto">
                         <Button
                             onClick={() => setShowAddUserDialog(true)}
                             className="gap-2"
@@ -491,11 +549,12 @@ Thank you for your cooperation! 🙏
                                 <TableHeader>
                                     <TableRow className="hover:bg-transparent">
                                         <TableHead className="text-center hidden">User ID</TableHead>
-                                        <TableHead className="text-center">Phone Number</TableHead>
+                                        <TableHead className="text-center">Username</TableHead>
                                         <TableHead className="text-center">Password</TableHead>
                                         <TableHead className="text-center hidden">Email</TableHead>
-                                        <TableHead className="text-center">Created Date</TableHead>
-                                        <TableHead className="text-center">Status</TableHead>
+                                        <TableHead className="text-center hidden md:table-cell">Created Date</TableHead>
+                                        <TableHead className="text-center hidden md:table-cell">Status</TableHead>
+                                        <TableHead className="text-center md:hidden">Info</TableHead>
                                         <TableHead className="text-right">Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -517,18 +576,53 @@ Thank you for your cooperation! 🙏
                                                 </div> */}
                                             </TableCell>
                                             <TableCell className="text-center">{user.password}</TableCell>
-                                            <TableCell className="text-center hidden">{user.email}</TableCell>
-                                            <TableCell className="text-center">{formatDate(user.createdAt)}</TableCell>
-                                            <TableCell className="text-center">
-                                                {user.isActive ? (
+                                            <TableCell className="text-center hidden md:table-cell">{formatDate(user.createdAt)}</TableCell>
+                                            <TableCell className="text-center hidden md:table-cell">
+                                                {user.status === 'active' ? (
                                                     <span className="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400">
                                                         Active
                                                     </span>
                                                 ) : (
                                                     <span className="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400">
-                                                        Inactive
+                                                        Blocked
                                                     </span>
                                                 )}
+                                            </TableCell>
+                                            <TableCell className="text-center md:hidden">
+                                                <Popover>
+                                                    <PopoverTrigger asChild>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="h-8 w-8 p-0"
+                                                        >
+                                                            <Info className="h-4 w-4" />
+                                                            <span className="sr-only">View user info</span>
+                                                        </Button>
+                                                    </PopoverTrigger>
+                                                    <PopoverContent className="w-auto p-2.5" align="end">
+                                                        <div className="flex gap-4">
+                                                            <div className="flex flex-col gap-0.5">
+                                                                <p className="text-xs text-muted-foreground leading-4">Created Date</p>
+                                                                <p className="text-xs font-medium leading-4">{formatDate(user.createdAt)}</p>
+                                                            </div>
+                                                            <div className="flex flex-col gap-0.5">
+                                                                <p className="text-xs text-muted-foreground leading-4">Status</p>
+                                                                <div className="leading-4">
+                                                                    {user.status === 'active' ? (
+                                                                        <span className="inline-flex items-center rounded-full px-1.5 py-0.5 text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400">
+                                                                            Active
+                                                                        </span>
+                                                                    ) : (
+                                                                        <span className="inline-flex items-center rounded-full px-1.5 py-0.5 text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400">
+                                                                            Blocked
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </PopoverContent>
+                                                </Popover>
                                             </TableCell>
                                             <TableCell className="text-right">
                                                 <div className="flex items-center justify-end gap-2">
@@ -541,6 +635,21 @@ Thank you for your cooperation! 🙏
                                                     >
                                                         <Share2 className="h-4 w-4" />
                                                         <span className="sr-only">Share credentials for {user.username}</span>
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => handleResetDeviceId(user.id, user.username)}
+                                                        disabled={resettingId === user.id}
+                                                        className="hover:bg-orange-50 hover:border-orange-300"
+                                                        title="Reset Device ID"
+                                                    >
+                                                        {resettingId === user.id ? (
+                                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                                        ) : (
+                                                            <RotateCcw className="h-4 w-4" />
+                                                        )}
+                                                        <span className="sr-only">Reset device ID for {user.username}</span>
                                                     </Button>
                                                     <AlertDialog open={userToDelete?.id === user.id} onOpenChange={(open) => !open && cancelDelete()}>
                                                         <AlertDialogTrigger asChild>
@@ -599,12 +708,12 @@ Thank you for your cooperation! 🙏
                                 </p>
                                 <p className="text-muted-foreground text-sm">
                                     Data from: <a
-                                        href="https://samanvi-backend.vercel.app/api/users"
+                                        href={`${API_BASE_URL}/api/v2/users`}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="text-primary hover:underline"
                                     >
-                                        Samanvi API
+                                        Samanvi V2 API
                                     </a>
                                 </p>
                             </div>
